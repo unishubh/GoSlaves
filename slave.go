@@ -30,8 +30,6 @@ func (s *slave) Open() error {
 		s.readyChan <- struct{}{}
 		// Loop until jobChan is closed
 		for data := range s.jobChan {
-			s.Owner.wg.Add(1)
-
 			ret := s.work.work(data)
 			if s.work.afterWork != nil {
 				s.work.afterWork(ret)

@@ -102,9 +102,7 @@ func (sp *SlavePool) Open(
 
 // Close the pool waiting all slaves and his tasks
 func (sp *SlavePool) Close() {
-	for len(sp.jobs) > 0 {
-		sp.wg.Wait()
-	}
+	sp.wg.Wait()
 
 	for _, s := range sp.Slaves {
 		s.Close()
@@ -115,5 +113,6 @@ func (sp *SlavePool) Close() {
 // SendWork receives the work and select
 // one unemployed slave in goroutine
 func (sp *SlavePool) SendWork(job interface{}) {
+	sp.wg.Add(1)
 	sp.jobs = append(sp.jobs, job)
 }
