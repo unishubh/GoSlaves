@@ -2,8 +2,8 @@ package slaves
 
 import (
 	"fmt"
-	"os"
 	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -14,7 +14,10 @@ func TestSendWork(t *testing.T) {
 		fmt.Println(obj)
 		return nil
 	}, nil)
-	defer sp.Close()
+	defer func() {
+		sp.Work()
+		sp.Close()
+	}()
 
 	sp.SendWork("Make me a cake plsssss")
 	sp.SendWork("Execute python and kill my motherboard")
@@ -28,7 +31,10 @@ func TestMakePool(t *testing.T) {
 	}, nil); err != nil {
 		panic(err)
 	}
-	defer sp.Close()
+	defer func() {
+		sp.Work()
+		sp.Close()
+	}()
 
 	files, err := ioutil.ReadDir(os.TempDir())
 	if err == nil {
@@ -38,4 +44,3 @@ func TestMakePool(t *testing.T) {
 		}
 	}
 }
-

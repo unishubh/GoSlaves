@@ -86,17 +86,28 @@ func (sp *SlavePool) Open(
 		}
 	}
 
+	sp.setRunning(true)
+	return nil
+}
+
+// SendWork receives the work and select
+// one unemployed slave in goroutine
+func (sp *SlavePool) SendWork(job interface{}) {
+	sp.wg.Add(1)
+	sp.jobs = append(sp.jobs, job)
+}
+
+func (sp *SlavePool) Work() error {
+	jobs := sp.jobs
 	go func() {
-		for {
+		for _, j := range jobs {
 			chosen, _, ok := reflect.Select(sp.readySelect)
-			if chosen >= 0 && ok && len(sp.jobs) > 0 {
-				sp.Slaves[chosen].jobChan <- sp.jobs[0]
-				sp.jobs = sp.jobs[1:]
+			if chosen >= 0 && ok {
+				sp.Slaves[chosen].jobChan <- j
 			}
 		}
 	}()
 
-	sp.setRunning(true)
 	return nil
 }
 
@@ -108,11 +119,4 @@ func (sp *SlavePool) Close() {
 		s.Close()
 	}
 	sp.setRunning(false)
-}
-
-// SendWork receives the work and select
-// one unemployed slave in goroutine
-func (sp *SlavePool) SendWork(job interface{}) {
-	sp.wg.Add(1)
-	sp.jobs = append(sp.jobs, job)
 }
