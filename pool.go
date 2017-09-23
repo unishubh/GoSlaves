@@ -1,20 +1,18 @@
 package slaves
 
 import (
-	"reflect"
 	"sync"
 	"sync/atomic"
 )
 
 // SlavePool is the structure of the slave pool
 type SlavePool struct {
-	running     uint32
-	mx          sync.Mutex
-	work        work
 	wg          sync.WaitGroup
-	jobs        []interface{}
+	running     uint32
+	work        work
+	jobs        Jobs
 	Slaves      []*slave
-	readySelect []reflect.SelectCase
+	readySelect []int32
 }
 
 // Check if pool is running
@@ -24,9 +22,6 @@ func (sp *SlavePool) isRunning() bool {
 
 // Stablish the running parameter
 func (sp *SlavePool) setRunning(set bool) {
-	sp.mx.Lock()
-	defer sp.mx.Unlock()
-
 	if set {
 		atomic.StoreUint32(&sp.running, 1)
 	} else {
@@ -40,11 +35,40 @@ func (sp *SlavePool) setRunning(set bool) {
 func MakePool(numSlaves int) (sp *SlavePool) {
 	sp = &SlavePool{
 		running:     0,
-		jobs:        make([]interface{}, 0),
 		Slaves:      make([]*slave, numSlaves),
-		readySelect: make([]reflect.SelectCase, numSlaves),
+		readySelect: make([]int32, numSlaves),
 	}
 	return
+}
+
+// Redefine readySelect variable
+func (sp *SlavePool) redefineSlaves() {
+	for i := range sp.Slaves {
+		sp.readySelect[i] = sp.Slaves[i].ready
+	}
+}
+
+// Delete slave from slave array
+func (sp *SlavePool) deleteSlave(slave int) {
+	sp.Slaves[slave].Close()
+	sp.Slaves = sp.Slaves[:slave+
+		copy(sp.Slaves[slave:], sp.Slaves[slave+1:])]
+	sp.redefineSlaves()
+}
+
+func (sp *SlavePool) prepareEnv() {
+	// caught the slaves in range
+	for i := range sp.Slaves {
+		sp.Slaves[i] = &slave{
+			ready:   1,
+			jobChan: make(chan interface{}),
+			work:    &sp.work,
+			Owner:   sp,
+		}
+		sp.Slaves[i].Open()
+	}
+
+	sp.redefineSlaves()
 }
 
 // Open the slave pool initialising all slaves
@@ -64,27 +88,36 @@ func (sp *SlavePool) Open(
 		sp.Slaves = make([]*slave, 4)
 	}
 	if len(sp.readySelect) == 0 {
-		sp.readySelect = make([]reflect.SelectCase, 4)
+		sp.readySelect = make([]int32, 4)
 	}
 
+	// assign work to do
 	sp.work = work{
 		work:      toDo,
 		afterWork: after,
 	}
+	sp.prepareEnv()
 
-	// caught the slaves in range
-	for i := range sp.Slaves {
-		sp.Slaves[i] = &slave{
-			work:  &sp.work,
-			Owner: sp,
-		}
-		sp.Slaves[i].Open()
+	go func() {
+		for {
+			switch {
+			case !sp.isRunning():
+				return // exit if not running
+			default:
+				for chosen := range sp.readySelect {
+					// get the slave who is ready
+					if atomic.LoadInt32(&sp.Slaves[chosen].ready) == 1 {
+						job := sp.jobs.Get()
+						if job == nil {
+							break
+						}
 
-		sp.readySelect[i] = reflect.SelectCase{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(sp.Slaves[i].readyChan),
+						sp.Slaves[chosen].jobChan <- job
+					}
+				}
+			}
 		}
-	}
+	}()
 
 	sp.setRunning(true)
 	return nil
@@ -93,30 +126,19 @@ func (sp *SlavePool) Open(
 // SendWork receives the work and select
 // one unemployed slave in goroutine
 func (sp *SlavePool) SendWork(job interface{}) {
-	sp.wg.Add(1)
-	sp.jobs = append(sp.jobs, job)
-}
-
-func (sp *SlavePool) Work() error {
-	jobs := sp.jobs
-	go func() {
-		for _, j := range jobs {
-			chosen, _, ok := reflect.Select(sp.readySelect)
-			if chosen >= 0 && ok {
-				sp.Slaves[chosen].jobChan <- j
-			}
-		}
-	}()
-
-	return nil
+	if sp.isRunning() {
+		sp.wg.Add(1)
+		sp.jobs.Put(job)
+	}
 }
 
 // Close the pool waiting all slaves and his tasks
 func (sp *SlavePool) Close() {
 	sp.wg.Wait()
 
-	for _, s := range sp.Slaves {
-		s.Close()
+	for i := range sp.Slaves {
+		sp.Slaves[i].Close()
 	}
+
 	sp.setRunning(false)
 }

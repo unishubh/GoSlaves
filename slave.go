@@ -1,6 +1,9 @@
 package slaves
 
-import "sync"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 type work struct {
 	work      func(interface{}) interface{}
@@ -8,12 +11,13 @@ type work struct {
 }
 
 type slave struct {
-	readyChan chan struct{}
-	jobChan   chan interface{}
-	mx        sync.Mutex
-	Owner     *SlavePool
-	work      *work
-	Type      []byte
+	ready   int32
+	jobChan chan interface{}
+	mx      sync.Mutex
+	wg      sync.WaitGroup
+	Owner   *SlavePool
+	work    *work
+	Type    []byte
 }
 
 // Open Starts the slave creating goroutine
@@ -22,25 +26,23 @@ func (s *slave) Open() error {
 	if s.work == nil {
 		return errworkIsNil
 	}
-	s.readyChan = make(chan struct{})
-	s.jobChan = make(chan interface{})
 
+	s.wg.Add(1)
 	go func() {
-		// Slave is ready to receive a job
-		s.readyChan <- struct{}{}
+		defer s.wg.Done()
 		// Loop until jobChan is closed
 		for data := range s.jobChan {
+			atomic.StoreInt32(&s.ready, 0)
+
 			ret := s.work.work(data)
 			if s.work.afterWork != nil {
 				s.work.afterWork(ret)
 			}
+			s.Owner.wg.Add(-1)
 
-			s.Owner.wg.Done()
 			// notify slave is ready to work
-			s.readyChan <- struct{}{}
+			atomic.StoreInt32(&s.ready, 1)
 		}
-
-		close(s.readyChan)
 	}()
 
 	return nil
@@ -69,4 +71,5 @@ func (s *slave) SetWork(
 // Close the slave waiting to finish his tasks
 func (s *slave) Close() {
 	close(s.jobChan)
+	s.wg.Wait()
 }

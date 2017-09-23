@@ -14,10 +14,7 @@ func TestSendWork(t *testing.T) {
 		fmt.Println(obj)
 		return nil
 	}, nil)
-	defer func() {
-		sp.Work()
-		sp.Close()
-	}()
+	defer sp.Close()
 
 	sp.SendWork("Make me a cake plsssss")
 	sp.SendWork("Execute python and kill my motherboard")
@@ -25,16 +22,11 @@ func TestSendWork(t *testing.T) {
 
 func TestMakePool(t *testing.T) {
 	sp := MakePool(10)
-	if err := sp.Open(func(obj interface{}) interface{} {
-		fmt.Println(obj.(string))
+	sp.Open(func(obj interface{}) interface{} {
+		fmt.Println(obj)
 		return nil
-	}, nil); err != nil {
-		panic(err)
-	}
-	defer func() {
-		sp.Work()
-		sp.Close()
-	}()
+	}, nil)
+	defer sp.Close()
 
 	files, err := ioutil.ReadDir(os.TempDir())
 	if err == nil {
