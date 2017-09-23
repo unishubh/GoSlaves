@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// replacement for Pool of sync library
+// Jobs replacement for Pool of sync library
 type Jobs struct {
 	mx   sync.RWMutex
 	jobs []interface{}
