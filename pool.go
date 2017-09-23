@@ -72,10 +72,12 @@ func (sp *SlavePool) deleteSlave(slave int) {
 	sp.redefineSlaves()
 }
 
+// Delete the latest slave
 func (sp *SlavePool) DeleteSlave() {
 	sp.deleteSlave(len(sp.Slaves) - 1)
 }
 
+// Add new slave to Slaves slice
 func (sp *SlavePool) AddSlave() {
 	new := &slave{
 		work:  &sp.work,

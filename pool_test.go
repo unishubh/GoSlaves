@@ -29,8 +29,10 @@ func TestDeleteSlave(t *testing.T) {
 		fmt.Println(obj)
 		return nil
 	}, nil)
-	defer fmt.Println("Slaves:", sp.GetSlaves())
-	defer sp.Close()
+	defer func() {
+		sp.Close()
+		fmt.Println("Slaves:", sp.GetSlaves())
+	}()
 
 	for i := 0; i < 10; i++ {
 		fmt.Println(i)
@@ -47,8 +49,10 @@ func TestAddSlave(t *testing.T) {
 		fmt.Println(obj)
 		return nil
 	}, nil)
-	defer fmt.Println("Slaves:", sp.GetSlaves())
-	defer sp.Close()
+	defer func() {
+		sp.Close()
+		fmt.Println("Slaves:", sp.GetSlaves())
+	}()
 
 	for i := 0; i < 10; i++ {
 		fmt.Println(i)
