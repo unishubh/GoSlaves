@@ -11,6 +11,7 @@ type work struct {
 }
 
 type slave struct {
+	opened  bool
 	ready   int32
 	jobChan chan interface{}
 	mx      sync.Mutex
@@ -26,6 +27,9 @@ func (s *slave) Open() error {
 	if s.work == nil {
 		return errworkIsNil
 	}
+	s.opened = true
+	s.ready = 1
+	s.jobChan = make(chan interface{})
 
 	s.wg.Add(1)
 	go func() {
@@ -71,5 +75,6 @@ func (s *slave) SetWork(
 // Close the slave waiting to finish his tasks
 func (s *slave) Close() {
 	close(s.jobChan)
+	s.opened = false
 	s.wg.Wait()
 }

@@ -7,6 +7,7 @@ import (
 
 // SlavePool is the structure of the slave pool
 type SlavePool struct {
+	mx          sync.RWMutex
 	wg          sync.WaitGroup
 	running     uint32
 	work        work
@@ -41,8 +42,19 @@ func MakePool(numSlaves int) (sp *SlavePool) {
 	return
 }
 
+func (sp *SlavePool) GetSlaves() int {
+	return len(sp.Slaves)
+}
+
 // Redefine readySelect variable
 func (sp *SlavePool) redefineSlaves() {
+	sp.mx.Lock()
+	defer sp.mx.Unlock()
+
+	if len(sp.Slaves) != len(sp.readySelect) {
+		sp.readySelect = make([]int32, len(sp.Slaves))
+	}
+
 	for i := range sp.Slaves {
 		sp.readySelect[i] = sp.Slaves[i].ready
 	}
@@ -50,20 +62,22 @@ func (sp *SlavePool) redefineSlaves() {
 
 // Delete slave from slave array
 func (sp *SlavePool) deleteSlave(slave int) {
+	sp.mx.Lock()
+
 	sp.Slaves[slave].Close()
 	sp.Slaves = sp.Slaves[:slave+
 		copy(sp.Slaves[slave:], sp.Slaves[slave+1:])]
 	sp.redefineSlaves()
+
+	sp.mx.Unlock()
 }
 
 func (sp *SlavePool) prepareEnv() {
 	// caught the slaves in range
 	for i := range sp.Slaves {
 		sp.Slaves[i] = &slave{
-			ready:   1,
-			jobChan: make(chan interface{}),
-			work:    &sp.work,
-			Owner:   sp,
+			work:  &sp.work,
+			Owner: sp,
 		}
 		sp.Slaves[i].Open()
 	}
