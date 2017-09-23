@@ -7,13 +7,12 @@ import (
 
 // SlavePool is the structure of the slave pool
 type SlavePool struct {
-	mx          sync.RWMutex
-	wg          sync.WaitGroup
-	running     uint32
-	work        work
-	jobs        Jobs
-	Slaves      []*slave
-	readySelect []int32
+	mx      sync.RWMutex
+	wg      sync.WaitGroup
+	running uint32
+	work    work
+	jobs    Jobs
+	Slaves  []*slave
 }
 
 // Check if pool is running
@@ -35,9 +34,8 @@ func (sp *SlavePool) setRunning(set bool) {
 // after function is the function that will be executed when work finish. Can be nil.
 func MakePool(numSlaves int) (sp *SlavePool) {
 	sp = &SlavePool{
-		running:     0,
-		Slaves:      make([]*slave, numSlaves),
-		readySelect: make([]int32, numSlaves),
+		running: 0,
+		Slaves:  make([]*slave, numSlaves),
 	}
 	return
 }
@@ -47,20 +45,6 @@ func (sp *SlavePool) GetSlaves() int {
 	return len(sp.Slaves)
 }
 
-// Redefine readySelect variable
-func (sp *SlavePool) redefineSlaves() {
-	sp.mx.Lock()
-	defer sp.mx.Unlock()
-
-	if len(sp.Slaves) != len(sp.readySelect) {
-		sp.readySelect = make([]int32, len(sp.Slaves))
-	}
-
-	for i := range sp.Slaves {
-		sp.readySelect[i] = sp.Slaves[i].ready
-	}
-}
-
 // Delete slave from slave array
 func (sp *SlavePool) deleteSlave(slave int) {
 	sp.Slaves[slave].Close()
@@ -68,8 +52,6 @@ func (sp *SlavePool) deleteSlave(slave int) {
 	sp.mx.Lock()
 	sp.Slaves = append(sp.Slaves[:slave], sp.Slaves[slave+1:]...)
 	sp.mx.Unlock()
-
-	sp.redefineSlaves()
 }
 
 // Delete the latest slave
@@ -88,8 +70,6 @@ func (sp *SlavePool) AddSlave() {
 	sp.mx.Lock()
 	sp.Slaves = append(sp.Slaves, new)
 	sp.mx.Unlock()
-
-	sp.redefineSlaves()
 }
 
 func (sp *SlavePool) prepareEnv() {
@@ -101,8 +81,6 @@ func (sp *SlavePool) prepareEnv() {
 		}
 		sp.Slaves[i].Open()
 	}
-
-	sp.redefineSlaves()
 }
 
 // Open the slave pool initialising all slaves
@@ -118,12 +96,6 @@ func (sp *SlavePool) Open(
 	if toDo == nil {
 		return errFuncNil
 	}
-	if len(sp.Slaves) == 0 {
-		sp.Slaves = make([]*slave, 4)
-	}
-	if len(sp.readySelect) == 0 {
-		sp.readySelect = make([]int32, 4)
-	}
 
 	// assign work to do
 	sp.work = work{
@@ -138,7 +110,7 @@ func (sp *SlavePool) Open(
 			case !sp.isRunning():
 				return // exit if not running
 			default:
-				for chosen := range sp.readySelect {
+				for chosen := range sp.Slaves {
 					// get the slave who is ready
 					if atomic.LoadInt32(&sp.Slaves[chosen].ready) == 1 {
 						job := sp.jobs.Get()
