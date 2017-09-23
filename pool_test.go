@@ -20,6 +20,42 @@ func TestSendWork(t *testing.T) {
 	sp.SendWork("Execute python and kill my motherboard")
 }
 
+func TestDeleteSlave(t *testing.T) {
+	sp := MakePool(20)
+
+	fmt.Println("Slaves:", sp.GetSlaves())
+
+	sp.Open(func(obj interface{}) interface{} {
+		fmt.Println(obj)
+		return nil
+	}, nil)
+	defer fmt.Println("Slaves:", sp.GetSlaves())
+	defer sp.Close()
+
+	for i := 0; i < 10; i++ {
+		fmt.Println(i)
+		sp.DeleteSlave()
+	}
+}
+
+func TestAddSlave(t *testing.T) {
+	sp := MakePool(1)
+
+	fmt.Println("Slaves:", sp.GetSlaves())
+
+	sp.Open(func(obj interface{}) interface{} {
+		fmt.Println(obj)
+		return nil
+	}, nil)
+	defer fmt.Println("Slaves:", sp.GetSlaves())
+	defer sp.Close()
+
+	for i := 0; i < 10; i++ {
+		fmt.Println(i)
+		sp.AddSlave()
+	}
+}
+
 func TestMakePool(t *testing.T) {
 	sp := MakePool(10)
 	sp.Open(func(obj interface{}) interface{} {

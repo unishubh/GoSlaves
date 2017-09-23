@@ -42,6 +42,7 @@ func MakePool(numSlaves int) (sp *SlavePool) {
 	return
 }
 
+// return the number of slaves
 func (sp *SlavePool) GetSlaves() int {
 	return len(sp.Slaves)
 }
@@ -62,14 +63,31 @@ func (sp *SlavePool) redefineSlaves() {
 
 // Delete slave from slave array
 func (sp *SlavePool) deleteSlave(slave int) {
-	sp.mx.Lock()
-
 	sp.Slaves[slave].Close()
-	sp.Slaves = sp.Slaves[:slave+
-		copy(sp.Slaves[slave:], sp.Slaves[slave+1:])]
-	sp.redefineSlaves()
 
+	sp.mx.Lock()
+	sp.Slaves = append(sp.Slaves[:slave], sp.Slaves[slave+1:]...)
 	sp.mx.Unlock()
+
+	sp.redefineSlaves()
+}
+
+func (sp *SlavePool) DeleteSlave() {
+	sp.deleteSlave(len(sp.Slaves) - 1)
+}
+
+func (sp *SlavePool) AddSlave() {
+	new := &slave{
+		work:  &sp.work,
+		Owner: sp,
+	}
+	new.Open()
+
+	sp.mx.Lock()
+	sp.Slaves = append(sp.Slaves, new)
+	sp.mx.Unlock()
+
+	sp.redefineSlaves()
 }
 
 func (sp *SlavePool) prepareEnv() {
