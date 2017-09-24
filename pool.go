@@ -111,6 +111,22 @@ func (sp *SlavePool) Open(
 	return nil
 }
 
+func (sp *SlavePool) SetWorkTo(to string,
+	toDo func(interface{}) interface{},
+	after func(interface{}),
+) {
+	w := &work{
+		work:      toDo,
+		afterWork: after,
+	}
+
+	for _, s := range sp.Slaves {
+		if to == s.Type {
+			s.work = &w
+		}
+	}
+}
+
 // SendWork receives the work and select
 // one unemployed slave in goroutine
 func (sp *SlavePool) SendWork(job interface{}) {
@@ -136,6 +152,7 @@ func (sp *SlavePool) SendWorkTo(to string, job interface{}) {
 		// delivering work to less occupied slave
 		for i, s := range sp.Slaves {
 			p := s.GetJobs()
+			println("jobs:", p)
 			if to == s.Type && p < min {
 				min, chosen = p, i
 			}
