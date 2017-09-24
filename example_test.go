@@ -7,7 +7,6 @@ import (
 	"os"
 )
 
-/*
 func ExampleSlavePool_SendWorkTo() {
 	sp := slaves.MakePool(2)
 
@@ -23,7 +22,6 @@ func ExampleSlavePool_SendWorkTo() {
 	sp.SendWorkTo("MakeCake", "Make me a cake plsssss")
 	sp.SendWorkTo("ProcessPiDecimals", "Execute python and kill my motherboard")
 }
-*/
 
 // Simple slave pool example
 func ExampleMakePool() {

@@ -1,6 +1,7 @@
 package slaves
 
 import (
+	"bytes"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -97,6 +98,9 @@ func (sp *SlavePool) Open(
 	if toDo == nil {
 		return errFuncNil
 	}
+	if sp.Slaves == nil {
+		sp.Slaves = make([]*slave, 4)
+	}
 
 	// assign work to do
 	sp.work = work{
@@ -114,15 +118,19 @@ func (sp *SlavePool) Open(
 				for chosen := range sp.Slaves {
 					// get the slave who is ready
 					if atomic.LoadInt32(&sp.Slaves[chosen].ready) == 1 {
-						job := sp.jobs.Get()
+						job := sp.jobs.get()
 						if job == nil {
 							break
 						}
 
-						sp.Slaves[chosen].jobChan <- job
+						if job.typed == nil ||
+							bytes.Equal(job.typed,
+								sp.Slaves[chosen].Type) {
+							sp.Slaves[chosen].jobChan <- job.job
+						}
 					}
-					// this is the price of good treatment of memory
-					// and cpu
+					// this is the price of good treatment
+					// of memory and cpu
 					time.Sleep(time.Millisecond * 10)
 				}
 			}
@@ -138,7 +146,14 @@ func (sp *SlavePool) Open(
 func (sp *SlavePool) SendWork(job interface{}) {
 	if sp.isRunning() {
 		sp.wg.Add(1)
-		sp.jobs.Put(job)
+		sp.jobs.put(iwork{nil, job})
+	}
+}
+
+func (sp *SlavePool) SendWorkTo(to string, job interface{}) {
+	if sp.isRunning() {
+		sp.wg.Add(1)
+		sp.jobs.put(iwork{[]byte(to), job})
 	}
 }
 

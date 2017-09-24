@@ -20,6 +20,22 @@ func TestSendWork(t *testing.T) {
 	sp.SendWork("Execute python and kill my motherboard")
 }
 
+func TestSendWorkTo(t *testing.T) {
+	sp := MakePool(2)
+
+	sp.Open(func(obj interface{}) interface{} {
+		fmt.Println(obj)
+		return nil
+	}, nil)
+	defer sp.Close()
+
+	sp.Slaves[0].Type = []byte("Borja")
+	sp.Slaves[1].Type = []byte("Paquillo")
+
+	sp.SendWorkTo("Borja", "Make me a cake plsssss")
+	sp.SendWorkTo("Paquillo", "Execute python and kill my motherboard")
+}
+
 func TestDeleteSlave(t *testing.T) {
 	sp := MakePool(20)
 
