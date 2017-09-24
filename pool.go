@@ -120,7 +120,7 @@ func (sp *SlavePool) SendWork(job interface{}) {
 		var chosen int = 0
 		// delivering work to less occupied slave
 		for i := 0; i < len(sp.Slaves); i++ {
-			if p := sp.Slaves[i].GetJobs(); p > min {
+			if p := sp.Slaves[i].GetJobs(); p < min {
 				min, chosen = p, i
 			}
 		}
@@ -138,7 +138,7 @@ func (sp *SlavePool) SendWorkTo(to string, job interface{}) {
 		// delivering work to less occupied slave
 		for i := 0; i < len(sp.Slaves); i++ {
 			p := sp.Slaves[i].GetJobs()
-			if to == sp.Slaves[i].Type && p > min {
+			if to == sp.Slaves[i].Type && p < min {
 				min, chosen = p, i
 			}
 		}
