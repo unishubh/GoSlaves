@@ -16,19 +16,19 @@ Example
 -------
 ```go
   sp := slaves.MakePool(10)
-  sp.Open()
+  if err := sp.Open(func(obj interface{}) interface{} {
+    fmt.Println(obj.(string))
+    return nil
+  }, nil); err != nil {
+    panic(err)
+  }
   defer sp.Close()
 
   files, err := ioutil.ReadDir(os.TempDir())
   if err == nil {
     fmt.Println("Files in temp directory:")
     for i := range files {
-      sp.SendWork(Work{
-        Work: func() interface{} {
-          fmt.Println(files[i].Name())
-          return nil
-        },
-      })
+      sp.SendWork(files[i].Name())
     }
   }
 ```
