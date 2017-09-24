@@ -14,7 +14,6 @@ type slave struct {
 	jobChan chan interface{}
 	Owner   *SlavePool
 	work    *work
-	Type    []byte
 }
 
 // Open Starts the slave creating goroutine

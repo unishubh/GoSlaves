@@ -3,6 +3,7 @@ package slaves
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // SlavePool is the structure of the slave pool
@@ -120,6 +121,9 @@ func (sp *SlavePool) Open(
 
 						sp.Slaves[chosen].jobChan <- job
 					}
+					// this is the price of good treatment of memory
+					// and cpu
+					time.Sleep(time.Millisecond * 10)
 				}
 			}
 		}

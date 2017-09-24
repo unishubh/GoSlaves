@@ -6,8 +6,6 @@ import (
 )
 
 func BenchmarkLimitedSmallRun(b *testing.B) {
-	b.ReportAllocs()
-
 	sp := MakePool(10)
 
 	var count = 0
