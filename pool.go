@@ -1,6 +1,7 @@
 package slaves
 
 import (
+	"math"
 	"sync"
 	"sync/atomic"
 )
@@ -116,7 +117,7 @@ func (sp *SlavePool) SendWork(job interface{}) {
 	if sp.isRunning() {
 		sp.wg.Add(1)
 
-		var min = 0
+		var min = math.MaxInt32
 		var chosen int = 0
 		// delivering work to less occupied slave
 		for i, s := range sp.Slaves {
@@ -130,17 +131,17 @@ func (sp *SlavePool) SendWork(job interface{}) {
 
 func (sp *SlavePool) SendWorkTo(to string, job interface{}) {
 	if sp.isRunning() {
-		sp.wg.Add(1)
-
-		var min = 0
+		var min = math.MaxInt32
 		var chosen int = 0
 		// delivering work to less occupied slave
 		for i, s := range sp.Slaves {
 			p := s.GetJobs()
-			if to == sp.Slaves[i].Type && p < min {
+			if to == s.Type && p < min {
 				min, chosen = p, i
 			}
 		}
+
+		sp.wg.Add(1)
 		sp.Slaves[chosen].jobs.put(job)
 	}
 }
