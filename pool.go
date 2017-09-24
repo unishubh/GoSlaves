@@ -119,13 +119,12 @@ func (sp *SlavePool) SendWork(job interface{}) {
 		var min = 0
 		var chosen int = 0
 		// delivering work to less occupied slave
-		for i := 0; i < len(sp.Slaves); i++ {
-			if p := sp.Slaves[i].GetJobs(); p < min {
+		for i, s := range sp.Slaves {
+			if p := s.GetJobs(); p < min {
 				min, chosen = p, i
 			}
 		}
 		sp.Slaves[chosen].jobs.put(job)
-		sp.Slaves[chosen].jobChan <- struct{}{}
 	}
 }
 
@@ -136,14 +135,13 @@ func (sp *SlavePool) SendWorkTo(to string, job interface{}) {
 		var min = 0
 		var chosen int = 0
 		// delivering work to less occupied slave
-		for i := 0; i < len(sp.Slaves); i++ {
-			p := sp.Slaves[i].GetJobs()
+		for i, s := range sp.Slaves {
+			p := s.GetJobs()
 			if to == sp.Slaves[i].Type && p < min {
 				min, chosen = p, i
 			}
 		}
 		sp.Slaves[chosen].jobs.put(job)
-		sp.Slaves[chosen].jobChan <- struct{}{}
 	}
 }
 
