@@ -152,7 +152,6 @@ func (sp *SlavePool) SendWorkTo(to string, job interface{}) {
 		// delivering work to less occupied slave
 		for i, s := range sp.Slaves {
 			p := s.GetJobs()
-			println("jobs:", p)
 			if to == s.Type && p < min {
 				min, chosen = p, i
 			}
