@@ -115,7 +115,7 @@ func (sp *SlavePool) SetWorkTo(to string,
 	toDo func(interface{}) interface{},
 	after func(interface{}),
 ) {
-	w := &work{
+	w := work{
 		work:      toDo,
 		afterWork: after,
 	}
