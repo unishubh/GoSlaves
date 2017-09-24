@@ -1,10 +1,8 @@
 package slaves
 
 import (
-	"bytes"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 // SlavePool is the structure of the slave pool
@@ -13,7 +11,6 @@ type SlavePool struct {
 	wg      sync.WaitGroup
 	running uint32
 	work    work
-	jobs    Jobs
 	Slaves  []*slave
 }
 
@@ -109,34 +106,6 @@ func (sp *SlavePool) Open(
 	}
 	sp.prepareEnv()
 
-	go func() {
-		for {
-			switch {
-			case !sp.isRunning():
-				return // exit if not running
-			default:
-				for chosen := range sp.Slaves {
-					// get the slave who is ready
-					if atomic.LoadInt32(&sp.Slaves[chosen].ready) == 1 {
-						job := sp.jobs.get()
-						if job == nil {
-							break
-						}
-
-						if job.typed == nil ||
-							bytes.Equal(job.typed,
-								sp.Slaves[chosen].Type) {
-							sp.Slaves[chosen].jobChan <- job.job
-						}
-					}
-					// this is the price of good treatment
-					// of memory and cpu
-					time.Sleep(time.Millisecond * 10)
-				}
-			}
-		}
-	}()
-
 	sp.setRunning(true)
 	return nil
 }
@@ -146,14 +115,33 @@ func (sp *SlavePool) Open(
 func (sp *SlavePool) SendWork(job interface{}) {
 	if sp.isRunning() {
 		sp.wg.Add(1)
-		sp.jobs.put(iwork{nil, job})
+
+		var min = 0
+		var chosen int = 0
+		// delivering work to less occupied slave
+		for i := 0; i < len(sp.Slaves); i++ {
+			if p := sp.Slaves[i].GetJobs(); p > min {
+				min, chosen = p, i
+			}
+		}
+		sp.Slaves[chosen].jobs.put(job)
 	}
 }
 
 func (sp *SlavePool) SendWorkTo(to string, job interface{}) {
 	if sp.isRunning() {
 		sp.wg.Add(1)
-		sp.jobs.put(iwork{[]byte(to), job})
+
+		var min = 0
+		var chosen int = 0
+		// delivering work to less occupied slave
+		for i := 0; i < len(sp.Slaves); i++ {
+			p := sp.Slaves[i].GetJobs()
+			if to == sp.Slaves[i].Type && p > min {
+				min, chosen = p, i
+			}
+		}
+		sp.Slaves[chosen].jobs.put(job)
 	}
 }
 

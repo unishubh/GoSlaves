@@ -1,7 +1,7 @@
 package slaves
 
 import (
-	"sync/atomic"
+	"time"
 )
 
 type work struct {
@@ -10,11 +10,12 @@ type work struct {
 }
 
 type slave struct {
-	ready   int32
-	jobChan chan interface{}
-	Owner   *SlavePool
-	work    *work
-	Type    []byte
+	ready int32
+	exit  chan struct{}
+	work  *work
+	jobs  Jobs
+	Owner *SlavePool
+	Type  string
 }
 
 // Open Starts the slave creating goroutine
@@ -24,21 +25,25 @@ func (s *slave) Open() error {
 		return errworkIsNil
 	}
 	s.ready = 1
-	s.jobChan = make(chan interface{})
+	s.exit = make(chan struct{})
 
 	go func() {
 		// Loop until jobChan is closed
-		for data := range s.jobChan {
-			atomic.StoreInt32(&s.ready, 0)
-
-			ret := s.work.work(data)
-			if s.work.afterWork != nil {
-				s.work.afterWork(ret)
+		for {
+			select {
+			case <-s.exit:
+				return
+			default:
+				if data := s.jobs.get(); data != nil {
+					ret := s.work.work(data)
+					if s.work.afterWork != nil {
+						s.work.afterWork(ret)
+					}
+					s.Owner.wg.Add(-1)
+				}
 			}
-			s.Owner.wg.Add(-1)
 
-			// notify slave is ready to work
-			atomic.StoreInt32(&s.ready, 1)
+			time.Sleep(time.Millisecond * 10)
 		}
 	}()
 
@@ -47,5 +52,9 @@ func (s *slave) Open() error {
 
 // Close the slave waiting to finish his tasks
 func (s *slave) Close() {
-	close(s.jobChan)
+	s.exit <- struct{}{}
+}
+
+func (s *slave) GetJobs() int {
+	return len(s.jobs.jobs)
 }
