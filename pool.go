@@ -125,6 +125,7 @@ func (sp *SlavePool) SendWork(job interface{}) {
 			}
 		}
 		sp.Slaves[chosen].jobs.put(job)
+		sp.Slaves[chosen].jobChan <- struct{}{}
 	}
 }
 
@@ -142,6 +143,7 @@ func (sp *SlavePool) SendWorkTo(to string, job interface{}) {
 			}
 		}
 		sp.Slaves[chosen].jobs.put(job)
+		sp.Slaves[chosen].jobChan <- struct{}{}
 	}
 }
 

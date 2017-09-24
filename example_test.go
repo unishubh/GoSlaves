@@ -16,8 +16,8 @@ func ExampleSlavePool_SendWorkTo() {
 	}, nil)
 	defer sp.Close()
 
-	sp.Slaves[0].Type = []byte("ProcessPiDecimals")
-	sp.Slaves[1].Type = []byte("MakeCake")
+	sp.Slaves[0].Type = "ProcessPiDecimals"
+	sp.Slaves[1].Type = "MakeCake"
 
 	sp.SendWorkTo("MakeCake", "Make me a cake plsssss")
 	sp.SendWorkTo("ProcessPiDecimals", "Execute python and kill my motherboard")
