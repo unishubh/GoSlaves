@@ -1,9 +1,0 @@
-\make pool
-\-make slaves
--send work
-\-make work
-\\return result
-\\ready
--close
-\close slaves
-\\close pool
