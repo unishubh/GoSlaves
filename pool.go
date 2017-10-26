@@ -1,8 +1,15 @@
 package slaves
 
 import (
+	"errors"
 	"github.com/themester/GoSlaves/slave"
 	"math"
+)
+
+var (
+	// ErrPoolOpened occurs when pool have been opened
+	// twice
+	ErrPoolOpened = errors.New("pool have been opened")
 )
 
 // SlavePool object
@@ -30,12 +37,16 @@ func MakePool(num uint, work func(interface{}) interface{},
 }
 
 // Open open all Slaves
-func (sp *SlavePool) Open() {
+func (sp *SlavePool) Open() error {
+	if sp.Slaves != nil {
+		return ErrPoolOpened
+	}
 	for _, s := range sp.Slaves {
 		if s != nil {
 			s.Open()
 		}
 	}
+	return nil
 }
 
 // Len Gets the length of the slave array
