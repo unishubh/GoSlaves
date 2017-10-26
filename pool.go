@@ -29,7 +29,7 @@ func MakePool(num uint, work func(interface{}) interface{},
 	return sp
 }
 
-// Open all Slaves
+// Open open all Slaves
 func (sp *SlavePool) Open() {
 	for _, s := range sp.Slaves {
 		if s != nil {
@@ -38,12 +38,12 @@ func (sp *SlavePool) Open() {
 	}
 }
 
-// Get the length of the slave array
+// Len Gets the length of the slave array
 func (sp *SlavePool) Len() int {
 	return len(sp.Slaves)
 }
 
-// Send work to the pool.
+// SendWork Send work to the pool.
 // This function get the slave with less number
 // of works and send him the job
 func (sp *SlavePool) SendWork(job interface{}) {
@@ -57,8 +57,8 @@ func (sp *SlavePool) SendWork(job interface{}) {
 	sp.Slaves[sel].SendWork(job)
 }
 
-// Close the pool waiting the end
-// of all jobs
+// Close closes the pool waiting
+// the end of all jobs
 func (sp *SlavePool) Close() {
 	for _, s := range sp.Slaves {
 		s.Close()

@@ -5,23 +5,23 @@ import (
 	"github.com/eapache/channels"
 )
 
-// Handle multiple jobs
+// Jobs Handle multiple jobs
 // enqueuing in buffered channel
 type Jobs struct {
 	ch *channels.InfiniteChannel
 }
 
-// Open jobs channel
+// Open creates jobs channel
 func (jobs *Jobs) Open() {
 	jobs.ch = channels.NewInfiniteChannel()
 }
 
-// Parse job to channel
+// Put send job to channel
 func (jobs *Jobs) Put(job interface{}) {
 	jobs.ch.In() <- job
 }
 
-// Get the length of jobs to do
+// Len Gets the length of jobs to do
 func (jobs *Jobs) Len() int {
 	return jobs.ch.Len()
 }
@@ -37,7 +37,7 @@ func (jobs *Jobs) Get() (interface{}, error) {
 	return r, nil
 }
 
-// stop to receive jobs
+// Close close job channel
 func (jobs *Jobs) Close() {
 	jobs.ch.Close()
 }
