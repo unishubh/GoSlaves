@@ -26,7 +26,7 @@ func (jobs *Jobs) Len() int {
 	return jobs.ch.Len()
 }
 
-// Gets a job from the buffered channel
+// Get gets a job from the buffered channel
 // if error is returned Close() function have
 // been called
 func (jobs *Jobs) Get() (interface{}, error) {
