@@ -15,13 +15,22 @@ go get github.com/themester/GoSlaves
 Example
 -------
 ```go
-  sp := slaves.MakePool(10)
-  if err := sp.Open(func(obj interface{}) interface{} {
-    fmt.Println(obj.(string))
+package main
+
+import (
+  "fmt"
+  "os"
+  "io/ioutil"
+  "github.com/themester/GoSlaves"
+)
+
+func main() {
+  sp := slaves.MakePool(5, func(obj interface{}) interface{} {
+    fmt.Println(obj)
     return nil
-  }, nil); err != nil {
-    panic(err)
-  }
+  }, nil)
+
+  sp.Open()
   defer sp.Close()
 
   files, err := ioutil.ReadDir(os.TempDir())
@@ -31,4 +40,5 @@ Example
       sp.SendWork(files[i].Name())
     }
   }
+}
 ```
