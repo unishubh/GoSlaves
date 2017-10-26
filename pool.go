@@ -7,21 +7,21 @@ import (
 
 // SlavePool object
 type SlavePool struct {
-	slaves []*slave.Slave
+	Slaves []*slave.Slave
 }
 
-// MakePool creates a pool and initialise slaves
-// num is the number of slaves
-// work is the function to execute in the slaves
+// MakePool creates a pool and initialise Slaves
+// num is the number of Slaves
+// work is the function to execute in the Slaves
 // after the function to execute after execution of work
 func MakePool(num uint, work func(interface{}) interface{},
 	after func(interface{})) SlavePool {
 
 	sp := SlavePool{
-		slaves: make([]*slave.Slave, num),
+		Slaves: make([]*slave.Slave, num),
 	}
-	for i := range sp.slaves {
-		sp.slaves[i] = &slave.Slave{
+	for i := range sp.Slaves {
+		sp.Slaves[i] = &slave.Slave{
 			Work:  work,
 			After: after,
 		}
@@ -29,9 +29,9 @@ func MakePool(num uint, work func(interface{}) interface{},
 	return sp
 }
 
-// Open all slaves
+// Open all Slaves
 func (sp *SlavePool) Open() {
-	for _, s := range sp.slaves {
+	for _, s := range sp.Slaves {
 		if s != nil {
 			s.Open()
 		}
@@ -39,8 +39,8 @@ func (sp *SlavePool) Open() {
 }
 
 // Get the length of the slave array
-func (sp *SlavePool) Slaves() int {
-	return len(sp.slaves)
+func (sp *SlavePool) Len() int {
+	return len(sp.Slaves)
 }
 
 // Send work to the pool.
@@ -49,18 +49,18 @@ func (sp *SlavePool) Slaves() int {
 func (sp *SlavePool) SendWork(job interface{}) {
 	v := math.MaxInt32
 	sel := 0
-	for i, s := range sp.slaves {
+	for i, s := range sp.Slaves {
 		if len := s.ToDo(); len < v {
 			v, sel = len, i
 		}
 	}
-	sp.slaves[sel].SendWork(job)
+	sp.Slaves[sel].SendWork(job)
 }
 
 // Close the pool waiting the end
 // of all jobs
 func (sp *SlavePool) Close() {
-	for _, s := range sp.slaves {
+	for _, s := range sp.Slaves {
 		s.Close()
 	}
 }
