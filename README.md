@@ -5,6 +5,8 @@ GoSlaves is a simple golang's library which can handle wide list of tasks asynch
 [![GoDoc](https://godoc.org/github.com/themester/GoSlaves?status.svg)](https://godoc.org/github.com/themester/GoSlaves)
 [![Go Report Card](https://goreportcard.com/badge/github.com/themester/goslaves)](https://goreportcard.com/report/github.com/themester/goslaves)
 
+![alt text](https://raw.githubusercontent.com/themester/GoSlaves/master/logo.png)
+
 Installation
 ------------
 
