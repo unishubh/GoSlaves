@@ -5,10 +5,15 @@ import (
 	"math"
 )
 
+// SlavePool object
 type SlavePool struct {
 	slaves []*slave.Slave
 }
 
+// MakePool creates a pool and initialise slaves
+// num is the number of slaves
+// work is the function to execute in the slaves
+// after the function to execute after execution of work
 func MakePool(num uint, work func(interface{}) interface{},
 	after func(interface{})) SlavePool {
 
@@ -24,6 +29,7 @@ func MakePool(num uint, work func(interface{}) interface{},
 	return sp
 }
 
+// Open all slaves
 func (sp *SlavePool) Open() {
 	for _, s := range sp.slaves {
 		if s != nil {
@@ -32,10 +38,14 @@ func (sp *SlavePool) Open() {
 	}
 }
 
+// Get the length of the slave array
 func (sp *SlavePool) Slaves() int {
 	return len(sp.slaves)
 }
 
+// Send work to the pool.
+// This function get the slave with less number
+// of works and send him the job
 func (sp *SlavePool) SendWork(job interface{}) {
 	v := math.MaxInt32
 	sel := 0
@@ -47,6 +57,8 @@ func (sp *SlavePool) SendWork(job interface{}) {
 	sp.slaves[sel].SendWork(job)
 }
 
+// Close the pool waiting the end
+// of all jobs
 func (sp *SlavePool) Close() {
 	for _, s := range sp.slaves {
 		s.Close()
