@@ -8,8 +8,19 @@ GoSlaves is a simple golang's library which can handle wide list of tasks asynch
 Installation
 ------------
 
+Experimental version:
 ```bash
 go get github.com/themester/GoSlaves
+```
+
+Stable version:
+```bash
+go get gopkg.in/themester/GoSlaves.v2
+```
+
+First stable version:
+```bash
+go get gopkg.in/themester/GoSlaves.v1
 ```
 
 Example
