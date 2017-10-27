@@ -1,15 +1,8 @@
 package slaves
 
 import (
-	"errors"
 	"github.com/themester/GoSlaves/slave"
 	"math"
-)
-
-var (
-	// ErrPoolOpened occurs when pool have been opened
-	// twice
-	ErrPoolOpened = errors.New("pool have been opened")
 )
 
 // SlavePool object
@@ -28,19 +21,13 @@ func MakePool(num uint, work func(interface{}) interface{},
 		Slaves: make([]*slave.Slave, num),
 	}
 	for i := range sp.Slaves {
-		sp.Slaves[i] = &slave.Slave{
-			Work:  work,
-			After: after,
-		}
+		sp.Slaves[i] = slave.NewSlave("", work, after)
 	}
 	return sp
 }
 
 // Open open all Slaves
 func (sp *SlavePool) Open() error {
-	if sp.Slaves != nil {
-		return ErrPoolOpened
-	}
 	for _, s := range sp.Slaves {
 		if s != nil {
 			s.Open()
@@ -62,6 +49,17 @@ func (sp *SlavePool) SendWork(job interface{}) {
 	sel := 0
 	for i, s := range sp.Slaves {
 		if len := s.ToDo(); len < v {
+			v, sel = len, i
+		}
+	}
+	sp.Slaves[sel].SendWork(job)
+}
+
+func (sp *SlavePool) SendWorkTo(name string, job interface{}) {
+	v := math.MaxInt32
+	sel := 0
+	for i, s := range sp.Slaves {
+		if len := s.ToDo(); len < v && name == s.Name {
 			v, sel = len, i
 		}
 	}

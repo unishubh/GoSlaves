@@ -5,6 +5,10 @@ import (
 	"github.com/eapache/channels"
 )
 
+var (
+	ErrChanClosed = errors.New("error: channel is closed")
+)
+
 // Jobs Handle multiple jobs
 // enqueuing in buffered channel
 type Jobs struct {
@@ -32,7 +36,7 @@ func (jobs *Jobs) Len() int {
 func (jobs *Jobs) Get() (interface{}, error) {
 	r, ok := <-jobs.ch.Out()
 	if !ok {
-		return nil, errors.New("chan closed")
+		return nil, ErrChanClosed
 	}
 	return r, nil
 }
