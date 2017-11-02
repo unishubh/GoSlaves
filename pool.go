@@ -32,7 +32,19 @@ func (sp *SlavePool) Len() int {
 	return len(sp.Slaves)
 }
 
-// Add slave to the pool
+// Working returns the number of slaves
+// who are working
+func (sp *SlavePool) Working() int {
+	var c int = 0
+	for _, s := range sp.Slaves {
+		if s.ToDo() > 0 {
+			c++
+		}
+	}
+	return c
+}
+
+// Add adds slave to the pool
 func (sp *SlavePool) Add(s Slave) {
 	slave := NewSlave(s.Name, s.Work, s.After)
 	sp.mx.Lock()
@@ -40,7 +52,7 @@ func (sp *SlavePool) Add(s Slave) {
 	sp.mx.Unlock()
 }
 
-// Delete the last slave
+// Del deletes the last slave
 func (sp *SlavePool) Del() {
 	sp.mx.Lock()
 	sp.Slaves = sp.Slaves[:len(sp.Slaves)-1]
@@ -61,6 +73,7 @@ func (sp *SlavePool) SendWork(job interface{}) {
 	sp.Slaves[sel].SendWork(job)
 }
 
+// SendWorkTo send work to specified worker
 func (sp *SlavePool) SendWorkTo(name string, job interface{}) {
 	v := math.MaxInt32
 	sel := 0
