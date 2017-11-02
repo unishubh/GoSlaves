@@ -8,6 +8,8 @@ import (
 // SlavePool object
 type SlavePool struct {
 	mx     sync.Mutex
+	work   func(interface{}) interface{}
+	after  func(interface{})
 	Slaves []*Slave
 }
 
@@ -20,6 +22,8 @@ func MakePool(num uint, work func(interface{}) interface{},
 
 	sp := SlavePool{
 		Slaves: make([]*Slave, num),
+		work:   work,
+		after:  after,
 	}
 	for i := range sp.Slaves {
 		sp.Slaves[i] = NewSlave("", work, after)
