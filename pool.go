@@ -1,13 +1,14 @@
 package slaves
 
 import (
-	"github.com/themester/GoSlaves/slave"
 	"math"
+	"sync"
 )
 
 // SlavePool object
 type SlavePool struct {
-	Slaves []*slave.Slave
+	mx     sync.Mutex
+	Slaves []*Slave
 }
 
 // MakePool creates a pool and initialise Slaves
@@ -18,27 +19,32 @@ func MakePool(num uint, work func(interface{}) interface{},
 	after func(interface{})) SlavePool {
 
 	sp := SlavePool{
-		Slaves: make([]*slave.Slave, num),
+		Slaves: make([]*Slave, num),
 	}
 	for i := range sp.Slaves {
-		sp.Slaves[i] = slave.NewSlave("", work, after)
+		sp.Slaves[i] = NewSlave("", work, after)
 	}
 	return sp
-}
-
-// Open open all Slaves
-func (sp *SlavePool) Open() error {
-	for _, s := range sp.Slaves {
-		if s != nil {
-			s.Open()
-		}
-	}
-	return nil
 }
 
 // Len Gets the length of the slave array
 func (sp *SlavePool) Len() int {
 	return len(sp.Slaves)
+}
+
+// Add slave to the pool
+func (sp *SlavePool) Add(s Slave) {
+	slave := NewSlave(s.Name, s.Work, s.After)
+	sp.mx.Lock()
+	sp.Slaves = append(sp.Slaves, slave)
+	sp.mx.Unlock()
+}
+
+// Delete the last slave
+func (sp *SlavePool) Del() {
+	sp.mx.Lock()
+	sp.Slaves = sp.Slaves[:len(sp.Slaves)-1]
+	sp.mx.Unlock()
 }
 
 // SendWork Send work to the pool.

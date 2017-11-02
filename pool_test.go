@@ -12,11 +12,6 @@ func TestSendWork_SlavePool(t *testing.T) {
 		fmt.Println(obj)
 		return nil
 	}, nil)
-
-	err := sp.Open()
-	if err != nil {
-		panic(err)
-	}
 	defer sp.Close()
 
 	files, err := ioutil.ReadDir(os.TempDir())
@@ -33,8 +28,6 @@ func TestSendWorkTo_SlavePool(t *testing.T) {
 		fmt.Println(obj)
 		return nil
 	}, nil)
-
-	sp.Open()
 	defer sp.Close()
 
 	sp.Slaves[0].Name = "borja"
@@ -45,5 +38,27 @@ func TestSendWorkTo_SlavePool(t *testing.T) {
 		for i := range files {
 			sp.SendWorkTo("borja", files[i].Name())
 		}
+	}
+}
+
+func TestAdd_SlavePool(t *testing.T) {
+	sp := MakePool(1, nil, nil)
+	defer sp.Close()
+
+	for i := 0; i < 20; i++ {
+		sp.Add(Slave{})
+		fmt.Println(sp.Len())
+	}
+}
+
+func TestDel_SlavePool(t *testing.T) {
+	sp := MakePool(1, nil, nil)
+	defer sp.Close()
+
+	for i := 0; i < 20; i++ {
+		s := Slave{}
+		sp.Add(s)
+		sp.Del()
+		fmt.Println(sp.Len())
 	}
 }

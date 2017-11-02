@@ -1,8 +1,7 @@
-package slave
+package slaves
 
 import (
 	"errors"
-	"github.com/themester/GoSlaves/jobs"
 	"sync"
 )
 
@@ -16,7 +15,7 @@ var (
 // Slave object that will
 // do the works
 type Slave struct {
-	jobs *jobs.Jobs
+	jobs *Jobs
 	// Name of slave
 	Name string
 	// Work of slave
@@ -30,19 +29,19 @@ type Slave struct {
 
 // NewSlave Create a slave easily parsing
 // the name of slave,
-// work to do when SendWork it's called (cannot be nil)
+// work to do when SendWork it's called
 // and work to do after Work() it's called
 func NewSlave(name string,
 	work func(interface{}) interface{},
 	after func(interface{})) *Slave {
 
-	if work == nil {
-		return nil
-	}
-	return &Slave{
+	s := &Slave{
+		Name:  name,
 		Work:  work,
 		After: after,
 	}
+	s.Open()
+	return s
 }
 
 // Open Creates job buffered channel and
@@ -52,7 +51,7 @@ func (s *Slave) Open() error {
 	if s.jobs != nil {
 		return ErrSlaveOpened
 	}
-	s.jobs = new(jobs.Jobs)
+	s.jobs = new(Jobs)
 	s.jobs.Open()
 
 	if s.After == nil {
@@ -65,7 +64,9 @@ func (s *Slave) Open() error {
 			if err != nil {
 				return
 			}
-			s.After(s.Work(job))
+			if s.Work != nil {
+				s.After(s.Work(job))
+			}
 			s.wg.Done()
 		}
 	}()

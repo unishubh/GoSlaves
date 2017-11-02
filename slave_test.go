@@ -1,4 +1,4 @@
-package slave
+package slaves
 
 import "testing"
 

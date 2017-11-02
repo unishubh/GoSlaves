@@ -42,8 +42,6 @@ func main() {
     fmt.Println(obj)
     return nil
   }, nil)
-
-  sp.Open()
   defer sp.Close()
 
   files, err := ioutil.ReadDir(os.TempDir())
