@@ -20,6 +20,12 @@ type SlavePool struct {
 func MakePool(num uint, work func(interface{}) interface{},
 	after func(interface{})) SlavePool {
 
+	if work == nil {
+		work = defaultWork
+	}
+	if after == nil {
+		after = defaultAfter
+	}
 	sp := SlavePool{
 		Slaves: make([]*Slave, num),
 		work:   work,
@@ -87,6 +93,11 @@ func (sp *SlavePool) SendWorkTo(name string, job interface{}) {
 		}
 	}
 	sp.Slaves[sel].SendWork(job)
+}
+
+// Send executes work in new goroutine
+func (sp *SlavePool) Send(job interface{}) {
+	go sp.after(sp.work(job))
 }
 
 // Close closes the pool waiting
