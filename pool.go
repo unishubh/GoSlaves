@@ -10,6 +10,7 @@ type SlavePool struct {
 	mx     sync.Mutex
 	work   func(interface{}) interface{}
 	after  func(interface{})
+	wg     sync.WaitGroup
 	Slaves []*Slave
 }
 
@@ -97,12 +98,17 @@ func (sp *SlavePool) SendWorkTo(name string, job interface{}) {
 
 // Send executes work in new goroutine
 func (sp *SlavePool) Send(job interface{}) {
-	go sp.after(sp.work(job))
+	sp.wg.Add(1)
+	go func() {
+		sp.after(sp.work(job))
+		sp.wg.Done()
+	}()
 }
 
 // Close closes the pool waiting
 // the end of all jobs
 func (sp *SlavePool) Close() {
+	sp.wg.Wait()
 	for _, s := range sp.Slaves {
 		s.Close()
 	}

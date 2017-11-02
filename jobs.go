@@ -6,6 +6,8 @@ import (
 )
 
 var (
+	// ErrChanClosed shows error where channel is closed
+	// where writing
 	ErrChanClosed = errors.New("error: channel is closed")
 )
 

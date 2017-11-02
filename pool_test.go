@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestSendWork_SlavePool(t *testing.T) {
@@ -37,6 +38,27 @@ func TestSendWorkTo_SlavePool(t *testing.T) {
 		fmt.Println("Files in temp directory:")
 		for i := range files {
 			sp.SendWorkTo("borja", files[i].Name())
+		}
+	}
+}
+
+func TestSend_SlavePool(t *testing.T) {
+	sp := MakePool(5, func(obj interface{}) interface{} {
+		fmt.Println(obj)
+		time.Sleep(time.Second)
+		return nil
+	}, nil)
+	defer sp.Close()
+
+	files, err := ioutil.ReadDir(os.TempDir())
+	if err == nil {
+		fmt.Println("Files in temp directory:")
+		for i := range files {
+			if sp.Working() == sp.Len() {
+				sp.Send(files[i].Name())
+			} else {
+				sp.SendWork(files[i].Name())
+			}
 		}
 	}
 }

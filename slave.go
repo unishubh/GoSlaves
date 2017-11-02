@@ -7,6 +7,9 @@ import (
 
 var (
 	defaultAfter = func(obj interface{}) {}
+	defaultWork  = func(obj interface{}) interface{} {
+		return nil
+	}
 	// ErrSlaveOpened occurs whem the same
 	// slave is open twice
 	ErrSlaveOpened = errors.New("slave is already opened")
