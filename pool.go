@@ -25,16 +25,19 @@ type SlavePool struct {
 // num is the number of Slaves
 // work is the function to execute in the Slaves
 // after the function to execute after execution of work
-func MakePool(num uint, work func(interface{}) interface{},
-	after func(interface{})) SlavePool {
+func MakePool(num int, work func(interface{}) interface{},
+	after func(interface{})) *SlavePool {
 
+	if num < 0 {
+		return nil
+	}
 	if work == nil {
 		work = defaultWork
 	}
 	if after == nil {
 		after = defaultAfter
 	}
-	sp := SlavePool{
+	sp := &SlavePool{
 		Slaves: make([]*Slave, num),
 		work:   work,
 		after:  after,
