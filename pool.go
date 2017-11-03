@@ -1,8 +1,13 @@
 package slaves
 
 import (
+	"errors"
 	"math"
 	"sync"
+)
+
+var (
+	ErrStacked = errors.New("error stacked: All slaves are busy")
 )
 
 // SlavePool object
@@ -12,6 +17,8 @@ type SlavePool struct {
 	after  func(interface{})
 	wg     sync.WaitGroup
 	Slaves []*Slave
+	// NotStack default is false
+	NotStack bool
 }
 
 // MakePool creates a pool and initialise Slaves
@@ -77,18 +84,39 @@ func (sp *SlavePool) AddUSend(s Slave, job interface{}) {
 	sp.Add(s).SendWork(job)
 }
 
+// findNonStacked search non-busy slaves
+func (sp *SlavePool) findNonStacked() int {
+	for i, s := range sp.Slaves {
+		if s.ToDo() == 0 {
+			return i
+		}
+	}
+	return -1
+}
+
 // SendWork Send work to the pool.
 // This function get the slave with less number
 // of works and send him the job
-func (sp *SlavePool) SendWork(job interface{}) {
+func (sp *SlavePool) SendWork(job interface{}) error {
+	if sp.NotStack {
+		if s := sp.findNonStacked(); s > 0 {
+			sp.Slaves[s].SendWork(job)
+			return nil
+		}
+		return ErrStacked
+	}
+
 	v := math.MaxInt32
 	sel := 0
 	for i, s := range sp.Slaves {
-		if len := s.ToDo(); len < v {
-			v, sel = len, i
+		if s != nil {
+			if len := s.ToDo(); len < v {
+				v, sel = len, i
+			}
 		}
 	}
 	sp.Slaves[sel].SendWork(job)
+	return nil
 }
 
 // SendWorkTo send work to specified worker
@@ -96,8 +124,10 @@ func (sp *SlavePool) SendWorkTo(name string, job interface{}) {
 	v := math.MaxInt32
 	sel := 0
 	for i, s := range sp.Slaves {
-		if len := s.ToDo(); len < v && name == s.Name {
-			v, sel = len, i
+		if s != nil {
+			if len := s.ToDo(); len < v && name == s.Name {
+				v, sel = len, i
+			}
 		}
 	}
 	sp.Slaves[sel].SendWork(job)
@@ -119,5 +149,14 @@ func (sp *SlavePool) Close() {
 	sp.wg.Wait()
 	for _, s := range sp.Slaves {
 		s.Close()
+	}
+}
+
+// Force close closes all pool slaves
+// without waiting slave job end
+func (sp *SlavePool) ForceClose() {
+	for i := sp.Len() - 1; i > 0; i = sp.Len() - 1 {
+		sp.Slaves[i].Close()
+		sp.Del()
 	}
 }

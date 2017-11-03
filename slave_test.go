@@ -11,11 +11,16 @@ func TestOpen_Slave(t *testing.T) {
 	}
 	s.Open()
 	defer s.Close()
-	s.SendWork("this")
-	s.SendWork("is")
-	s.SendWork("to")
-	s.SendWork("check")
-	s.SendWork("one")
-	s.SendWork("slave")
-	s.SendWork("hehe")
+
+	c := 0
+	for _, str := range []string{
+		"this", "is", "to", "check",
+		"one", "slave", "hehe",
+	} {
+		s.SendWork(str)
+		c++
+	}
+	if c != 7 {
+		panic("error")
+	}
 }

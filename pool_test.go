@@ -100,3 +100,44 @@ func TestAddUSend_SlavePool(t *testing.T) {
 		sp.Del()
 	}
 }
+
+func TestNonStacked_SlavePool(t *testing.T) {
+	sp := MakePool(5, func(obj interface{}) interface{} {
+		time.Sleep(3 * time.Second)
+		return nil
+	}, nil)
+	sp.NotStack = true
+	defer sp.Close()
+
+	for i := 0; i < 5; i++ {
+		sp.SendWork(nil)
+	}
+	err := sp.SendWork(nil)
+	if err == nil {
+		panic("stacked not works")
+	}
+	fmt.Println(err)
+}
+
+func TestForceClose_SlavePool(t *testing.T) {
+	sp := MakePool(4, func(obj interface{}) interface{} {
+		println(obj.(string))
+		return nil
+	}, nil)
+
+	c := 0
+	go func() {
+		for _, str := range []string{
+			"hello", "I", "am", "going",
+			"to", "kill", "the", "pool",
+		} {
+			sp.SendWork(str)
+			c++
+		}
+	}()
+	sp.ForceClose()
+
+	if c == 7 {
+		panic("error")
+	}
+}
