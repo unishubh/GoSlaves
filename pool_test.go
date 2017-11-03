@@ -64,7 +64,7 @@ func TestSend_SlavePool(t *testing.T) {
 }
 
 func TestAdd_SlavePool(t *testing.T) {
-	sp := MakePool(1, nil, nil)
+	sp := MakePool(0, nil, nil)
 	defer sp.Close()
 
 	for i := 0; i < 20; i++ {
@@ -74,7 +74,7 @@ func TestAdd_SlavePool(t *testing.T) {
 }
 
 func TestDel_SlavePool(t *testing.T) {
-	sp := MakePool(1, nil, nil)
+	sp := MakePool(0, nil, nil)
 	defer sp.Close()
 
 	for i := 0; i < 20; i++ {
@@ -82,5 +82,21 @@ func TestDel_SlavePool(t *testing.T) {
 		sp.Add(s)
 		sp.Del()
 		fmt.Println(sp.Len())
+	}
+}
+
+func TestAddUSend_SlavePool(t *testing.T) {
+	sp := MakePool(0, nil, nil)
+	defer sp.Close()
+
+	for i := 0; i < 20; i++ {
+		s := Slave{
+			Work: func(obj interface{}) interface{} {
+				fmt.Println(obj, "Pool len:", sp.Len())
+				return nil
+			},
+		}
+		sp.AddUSend(s, i)
+		sp.Del()
 	}
 }

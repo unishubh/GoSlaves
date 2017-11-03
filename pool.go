@@ -56,11 +56,12 @@ func (sp *SlavePool) Working() int {
 }
 
 // Add adds slave to the pool
-func (sp *SlavePool) Add(s Slave) {
+func (sp *SlavePool) Add(s Slave) *Slave {
 	slave := NewSlave(s.Name, s.Work, s.After)
 	sp.mx.Lock()
 	sp.Slaves = append(sp.Slaves, slave)
 	sp.mx.Unlock()
+	return slave
 }
 
 // Del deletes the last slave
@@ -68,6 +69,12 @@ func (sp *SlavePool) Del() {
 	sp.mx.Lock()
 	sp.Slaves = sp.Slaves[:len(sp.Slaves)-1]
 	sp.mx.Unlock()
+}
+
+// AddUSend creates new slave and adds into
+// the new queue sends job
+func (sp *SlavePool) AddUSend(s Slave, job interface{}) {
+	sp.Add(s).SendWork(job)
 }
 
 // SendWork Send work to the pool.
@@ -97,6 +104,7 @@ func (sp *SlavePool) SendWorkTo(name string, job interface{}) {
 }
 
 // Send executes work in new goroutine
+// without adding into slave pool
 func (sp *SlavePool) Send(job interface{}) {
 	sp.wg.Add(1)
 	go func() {
