@@ -33,16 +33,23 @@ package main
 import (
   "fmt"
   "os"
+  "time"
   "io/ioutil"
   "github.com/themester/GoSlaves"
 )
 
 func main() {
-  sp := slaves.MakePool(5, func(obj interface{}) interface{} {
-    fmt.Println(obj)
-    return nil
-  }, nil)
-  defer sp.Close()
+  sp := &SlavePool{
+    Work: func(obj interface{}) interface{} {
+      fmt.Println(obj)
+      return nil
+    },
+  }
+  sp.Open()
+  defer func() {
+    time.Sleep(time.Second)
+    sp.Close()
+  }()
 
   files, err := ioutil.ReadDir(os.TempDir())
   if err == nil {
