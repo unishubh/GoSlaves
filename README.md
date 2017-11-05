@@ -39,7 +39,7 @@ import (
 )
 
 func main() {
-  sp := &SlavePool{
+  sp := &slaves.SlavePool{
     Work: func(obj interface{}) interface{} {
       fmt.Println(obj)
       return nil
