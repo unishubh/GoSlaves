@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestSendWork_SlavePool(t *testing.T) {
+func TestServe_SlavePool(t *testing.T) {
 	sp := &SlavePool{
 		Work: func(obj interface{}) {
 			if obj == nil {
@@ -22,12 +22,12 @@ func TestSendWork_SlavePool(t *testing.T) {
 	files, err := ioutil.ReadDir(os.TempDir())
 	if err == nil {
 		for i := range files {
-			sp.SendWork(files[i].Name())
+			sp.Serve(files[i].Name())
 		}
 	}
 }
 
-func BenchmarkSendWork_SlavePool(b *testing.B) {
+func BenchmarkServe_SlavePool(b *testing.B) {
 	ln, err := net.Listen("tcp4", ":6666")
 	if err != nil {
 		panic(err)
@@ -51,7 +51,7 @@ func BenchmarkSendWork_SlavePool(b *testing.B) {
 				break
 			}
 
-			sp.SendWork(conn)
+			sp.Serve(conn)
 		}
 	}()
 
