@@ -2,30 +2,27 @@ package slaves
 
 import (
 	"sync"
+	"time"
+)
+
+var (
+	defaultTime = time.Millisecond * 200
 )
 
 type SlavePool struct {
-	lock    sync.Mutex
-	slaves  []*Slave
-	ready   []*Slave
-	works   int
-	stop    chan struct{}
-	Workers int
-	Work    func(interface{}) interface{}
+	pool sync.Pool
+	stop chan struct{}
+	Work func(interface{})
 }
 
 func (sp *SlavePool) Open() {
-	if sp.Workers <= 0 {
-		sp.Workers = 256
-	}
-
-	sp.slaves = make([]*Slave, sp.Workers)
-	for i := range sp.slaves {
-		sp.slaves[i] = &Slave{
+	for i := 0; i < 5; i++ {
+		s := &Slave{
 			Owner: sp,
 		}
-		sp.slaves[i].Open()
-		sp.ready = append(sp.ready, sp.slaves[i])
+		s.Open()
+		sp.pool.Put(s)
+		s = nil
 	}
 
 	sp.stop = make(chan struct{})
@@ -35,39 +32,47 @@ func (sp *SlavePool) Open() {
 			case <-sp.stop:
 				return
 			}
-			n := len(sp.slaves)
-			if n > sp.Workers {
-				sp.lock.Lock()
-				i := n - 1
-				for ; i > sp.Workers; i-- {
-					sp.slaves[i].Close()
-					sp.slaves[i] = nil
+			st := sp.pool.Get()
+			if st != nil {
+				s := st.(*Slave)
+				if time.Since(s.lastUsage) > defaultTime {
+					s.Close()
+				} else {
+					sp.pool.Put(s)
 				}
-				sp.slaves = sp.slaves[:i]
-				sp.lock.Unlock()
 			}
 		}
 	}()
 }
 
 func (sp *SlavePool) SendWork(job interface{}) bool {
-	sp.lock.Lock()
-	defer sp.lock.Unlock()
-
-	n := len(sp.ready) - 1
-	if n < 0 {
+	s := sp.pool.Get()
+	if s == nil {
+		for i := 0; i < 5; i++ {
+			t := &Slave{
+				Owner: sp,
+			}
+			t.Open()
+			sp.pool.Put(t)
+			t = nil
+		}
+		s = sp.pool.Get()
+	}
+	if s == nil {
 		return false
 	}
+	s.(*Slave).ch <- job
 
-	s := sp.ready[n]
-	s.ch <- job
-	sp.ready = sp.ready[:n]
 	return true
 }
 
 func (sp *SlavePool) Close() {
 	sp.stop <- struct{}{}
-	for _, c := range sp.slaves {
-		c.Close()
+	for {
+		s := sp.pool.Get()
+		if s == nil {
+			break
+		}
+		s.(*Slave).Close()
 	}
 }

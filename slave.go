@@ -1,22 +1,22 @@
 package slaves
 
+import "time"
+
 type Slave struct {
-	ch    chan interface{}
-	Owner *SlavePool
+	ch        chan interface{}
+	lastUsage time.Time
+	Owner     *SlavePool
 }
 
 func (s *Slave) Open() {
-	s.ch = make(chan interface{})
-	go s.do()
-}
-
-func (s *Slave) do() {
-	for w := range s.ch {
-		s.Owner.Work(w)
-		s.Owner.ready = append(
-			s.Owner.ready, s,
-		)
-	}
+	s.ch = make(chan interface{}, 1)
+	go func() {
+		for w := range s.ch {
+			s.Owner.Work(w)
+			s.lastUsage = time.Now()
+			s.Owner.pool.Put(s)
+		}
+	}()
 }
 
 func (s *Slave) Close() {
