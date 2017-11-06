@@ -44,6 +44,7 @@ func BenchmarkSendWork_SlavePool(b *testing.B) {
 				conn.Close()
 			},
 		}
+		sp.Open()
 		for {
 			conn, err := ln.Accept()
 			if err != nil {

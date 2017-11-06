@@ -1,7 +1,6 @@
 package slaves
 
 import (
-	"sync"
 	"time"
 )
 
@@ -10,12 +9,16 @@ var (
 )
 
 type SlavePool struct {
-	pool sync.Pool
+	pool *Works
 	stop chan struct{}
 	Work func(interface{})
 }
 
 func (sp *SlavePool) Open() {
+	if sp.pool != nil {
+		panic("pool already running")
+	}
+	sp.pool = new(Works)
 	for i := 0; i < 5; i++ {
 		s := &Slave{
 			Owner: sp,
