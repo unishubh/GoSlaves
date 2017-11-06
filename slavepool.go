@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	defaultTime = time.Millisecond * 200
+	defaultTime = time.Second
 )
 
 type SlavePool struct {
@@ -19,19 +19,19 @@ func (sp *SlavePool) Open() {
 		panic("pool already running")
 	}
 
-	sp.pool = new(Pool)
+	sp.pool = &Pool{
+		f: sp.Work,
+	}
 	for i := 0; i < 5; i++ {
-		go sp.pool.Make(sp.Work)
+		go sp.pool.Make()
 	}
 
-	sp.stop = make(chan struct{})
+	sp.stop = make(chan struct{}, 1)
 	go func() {
 		for {
 			select {
 			case <-sp.stop:
 				return
-			default:
-				time.Sleep(defaultTime)
 			}
 			s := sp.pool.Get()
 			if s != nil {
@@ -49,9 +49,7 @@ func (sp *SlavePool) Open() {
 func (sp *SlavePool) Serve(job interface{}) bool {
 	s := sp.pool.Get()
 	if s == nil {
-		for i := 0; i < 5; i++ {
-			s = sp.pool.Make(sp.Work)
-		}
+		s = sp.pool.Make()
 	}
 	if s == nil {
 		return false
