@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	defaultTime = time.Second
+	defaultTime = time.Second * 10
 )
 
 type SlavePool struct {
@@ -32,16 +32,28 @@ func (sp *SlavePool) Open() {
 			select {
 			case <-sp.stop:
 				return
+			default:
+				time.Sleep(defaultTime)
 			}
-			s := sp.pool.Get()
-			if s != nil {
-				if time.Since(s.lastUsage) > defaultTime {
-					s.Close()
-					s = nil
+			var i int
+			var s *Slave
+			sp.pool.ck.Lock()
+			for i, s = range sp.pool.slaves {
+				if s == nil {
+					sp.pool.slaves = append(
+						sp.pool.slaves[:i], sp.pool.slaves[i+1:]...,
+					)
 				} else {
-					sp.pool.Put(s)
+					if time.Since(s.lastUsage) > defaultTime {
+						s.Close()
+						sp.pool.slaves = append(
+							sp.pool.slaves[:i], sp.pool.slaves[i+1:]...,
+						)
+					}
 				}
+				s = nil
 			}
+			sp.pool.ck.Unlock()
 		}
 	}()
 }
