@@ -40,9 +40,8 @@ import (
 
 func main() {
   sp := &slaves.SlavePool{
-    Work: func(obj interface{}) interface{} {
+    Work: func(obj interface{}) {
       fmt.Println(obj)
-      return nil
     },
   }
   sp.Open()
@@ -55,7 +54,7 @@ func main() {
   if err == nil {
     fmt.Println("Files in temp directory:")
     for i := range files {
-      sp.SendWork(files[i].Name())
+      sp.Serve(files[i].Name())
     }
   }
 }
