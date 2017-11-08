@@ -6,7 +6,7 @@ import (
 )
 
 type Pool struct {
-	ck     sync.RWMutex
+	ck     sync.Mutex
 	slaves []*Slave
 	f      func(interface{})
 }

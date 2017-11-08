@@ -35,18 +35,20 @@ func (sp *SlavePool) Open() {
 			default:
 				time.Sleep(defaultTime)
 			}
-			var i int
 			var s *Slave
 			sp.pool.ck.Lock()
-			for i, s = range sp.pool.slaves {
+			for i := 0; i < len(sp.pool.slaves); i++ {
+				s = sp.pool.slaves[i]
 				if s == nil {
 					sp.pool.slaves = sp.pool.slaves[:i+
 						copy(sp.pool.slaves[i:], sp.pool.slaves[i+1:])]
+					i--
 				} else {
 					if time.Since(s.lastUsage) > defaultTime {
 						s.Close()
 						sp.pool.slaves = sp.pool.slaves[:i+
 							copy(sp.pool.slaves[i:], sp.pool.slaves[i+1:])]
+						i--
 					}
 				}
 				s = nil
