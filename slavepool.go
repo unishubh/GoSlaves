@@ -9,9 +9,10 @@ var (
 )
 
 type SlavePool struct {
-	pool *Pool
-	stop chan struct{}
-	Work func(interface{})
+	pool  *Pool
+	stop  chan struct{}
+	Work  func(interface{})
+	Limit int
 }
 
 func (sp *SlavePool) Open() {
@@ -61,6 +62,10 @@ func (sp *SlavePool) Open() {
 func (sp *SlavePool) Serve(job interface{}) bool {
 	s := sp.pool.Get()
 	if s == nil {
+		l := sp.pool.Len()
+		if l >= sp.Limit {
+			return false
+		}
 		s = sp.pool.Make()
 	}
 	if s == nil {

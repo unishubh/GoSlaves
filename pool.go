@@ -58,5 +58,7 @@ func (p *Pool) Make() *Slave {
 }
 
 func (p *Pool) Len() int {
+	p.ck.Lock()
+	defer p.ck.Unlock()
 	return len(p.slaves)
 }
