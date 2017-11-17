@@ -1,0 +1,14 @@
+- tunny.go
+served 10000
+goos: linux
+goarch: amd64
+BenchmarkTunny-4   	       1	26025181150 ns/op
+PASS
+ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	26.036s
+
+- slaves
+goos: linux
+goarch: amd64
+BenchmarkSlaves-4   	       1	16492115922 ns/op
+PASS
+ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	16.503s

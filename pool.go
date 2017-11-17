@@ -7,8 +7,36 @@ import (
 
 type Pool struct {
 	ck     sync.Mutex
+	stack  []interface{}
 	slaves []*Slave
 	f      func(interface{})
+}
+
+func (p *Pool) AddStack(job interface{}) {
+	p.ck.Lock()
+	if p.stack == nil {
+		p.stack = make([]interface{}, 0)
+	}
+	p.stack = append(p.stack, job)
+	p.ck.Unlock()
+}
+
+func (p *Pool) GetStack() interface{} {
+	p.ck.Lock()
+	defer p.ck.Unlock()
+	if p.stack == nil {
+		return nil
+	}
+	n := p.StackLen()
+	r := p.stack[n]
+	p.stack = p.stack[:n]
+	return r
+}
+
+func (p *Pool) StackLen() int {
+	p.ck.Lock()
+	defer p.ck.Unlock()
+	return len(p.stack)
 }
 
 func (p *Pool) Get() *Slave {
@@ -46,11 +74,14 @@ func (p *Pool) Make() *Slave {
 
 	go func() {
 		var r interface{}
-		for r = range s.ch {
-			p.f(r)
-			s.lastUsage = time.Now()
-			p.Put(s)
-			r = nil
+		for {
+			select {
+			case r = <-s.ch:
+				p.f(r)
+				s.lastUsage = time.Now()
+				p.Put(s)
+				r = nil
+			}
 		}
 	}()
 
