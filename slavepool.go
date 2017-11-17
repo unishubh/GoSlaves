@@ -9,21 +9,34 @@ var (
 )
 
 type SlavePool struct {
-	pool  *Pool
-	stop  chan struct{}
-	Work  func(interface{})
+	pool *Pool
+	stop chan struct{}
+	// SlavePool work
+	Work func(interface{})
+	// Limit of slaves
 	Limit int
+	// Minimum number of slaves
+	// waiting for tasks
+	MinSlaves int
+	// Time to reassign slaves
+	Timeout time.Duration
 }
 
 func (sp *SlavePool) Open() {
 	if sp.pool != nil {
 		panic("pool already running")
 	}
+	if sp.Timeout <= 0 {
+		sp.Timeout = defaultTime
+	}
+	if sp.MinSlaves <= 0 {
+		sp.MinSlaves = 5
+	}
 
 	sp.pool = &Pool{
 		f: sp.Work,
 	}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < sp.MinSlaves; i++ {
 		go sp.pool.Make()
 	}
 
@@ -34,27 +47,36 @@ func (sp *SlavePool) Open() {
 			case <-sp.stop:
 				return
 			default:
-				time.Sleep(defaultTime)
+				for {
+					if sp.pool.StackLen() == 0 {
+						break
+					}
+					job := sp.pool.GetStack()
+					if job != nil {
+						sp.Serve(job)
+					}
+				}
+				time.Sleep(sp.Timeout)
 			}
 			var s *Slave
-			sp.pool.ck.Lock()
-			for i := 0; i < len(sp.pool.slaves); i++ {
+			for i := 0; i < sp.pool.Len(); i++ {
 				s = sp.pool.slaves[i]
 				if s == nil {
 					sp.pool.slaves = sp.pool.slaves[:i+
 						copy(sp.pool.slaves[i:], sp.pool.slaves[i+1:])]
 					i--
 				} else {
-					if time.Since(s.lastUsage) > defaultTime {
+					if sp.pool.Len() > sp.MinSlaves && time.Since(s.lastUsage) > sp.Timeout {
+						sp.pool.ck.Lock()
 						s.Close()
 						sp.pool.slaves = sp.pool.slaves[:i+
 							copy(sp.pool.slaves[i:], sp.pool.slaves[i+1:])]
 						i--
+						sp.pool.ck.Unlock()
 					}
 				}
 				s = nil
 			}
-			sp.pool.ck.Unlock()
 		}
 	}()
 }
@@ -74,6 +96,10 @@ func (sp *SlavePool) Serve(job interface{}) bool {
 	s.ch <- job
 
 	return true
+}
+
+func (sp *SlavePool) Enqueue(job interface{}) {
+	sp.pool.AddStack(job)
 }
 
 func (sp *SlavePool) Close() {
