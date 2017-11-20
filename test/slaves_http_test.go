@@ -29,7 +29,6 @@ func BenchmarkSlavesHTTP(b *testing.B) {
 			server.ServeConn(conn)
 			conn.Close()
 		},
-		Limit: 120,
 	}
 	sp.Open()
 	defer sp.Close()
@@ -46,12 +45,12 @@ func BenchmarkSlavesHTTP(b *testing.B) {
 	var ok, ot, er, timeout uint32
 	var wg sync.WaitGroup
 	now := time.Now()
-	for i := 0; i < 400; i++ {
+	for i := 0; i < 500; i++ {
 		c := fasthttp.Client{}
 
 		wg.Add(1)
 		go func() {
-			sc, _, err := c.GetTimeout(nil, "http://localhost:6668", time.Second*2)
+			sc, _, err := c.GetTimeout(nil, "http://localhost:6668", time.Second)
 			if err != nil {
 				atomic.AddUint32(&timeout, 1)
 			} else {

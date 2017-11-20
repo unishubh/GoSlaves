@@ -42,7 +42,7 @@ func (sp *SlavePool) Open() {
 		for !sp.stop {
 			time.Sleep(sp.Timeout)
 			for {
-				if atomic.LoadInt32(&sp.working) <= sp.MinSlaves {
+				if atomic.LoadInt32(&sp.working) <= int32(sp.MinSlaves) {
 					break
 				}
 				s := sp.ready.Get()
@@ -62,27 +62,28 @@ func (sp *SlavePool) Open() {
 				// get one slave from pool
 				s := sp.ready.Get()
 				if s == nil {
-					if int32(sp.Limit) > atomic.LoadInt32(&sp.working) {
-						// create new slave
-						atomic.AddInt32(&sp.working, 1)
-						ch := make(chan interface{}, 1)
-						sp.ready.Put(ch)
-						go func() {
-							defer atomic.AddInt32(&sp.working, -1)
-							for t := range ch {
-								if t == nil {
-									close(ch)
-									return
+					go func() {
+						if int32(sp.Limit) > atomic.LoadInt32(&sp.working) {
+							atomic.AddInt32(&sp.working, 1)
+							ch := make(chan interface{}, 1)
+							sp.ready.Put(ch)
+							go func() {
+								defer atomic.AddInt32(&sp.working, -1)
+								for t := range ch {
+									if t == nil {
+										close(ch)
+										return
+									}
+									sp.Work(t)
+									sp.ready.Put(ch)
 								}
-								sp.Work(t)
-								sp.ready.Put(ch)
-							}
-						}()
-						ch <- task
-					} else {
-						// re-add to task queue
-						sp.pool.Put(task)
-					}
+							}()
+							ch <- task
+						} else {
+							// re-add to task queue
+							sp.pool.Put(task)
+						}
+					}()
 				} else {
 					s.(chan interface{}) <- task
 				}
@@ -92,7 +93,7 @@ func (sp *SlavePool) Open() {
 }
 
 func (sp *SlavePool) Serve(job interface{}) {
-	sp.pool.Put(job)
+	go sp.pool.Put(job)
 }
 
 func (sp *SlavePool) Close() {
