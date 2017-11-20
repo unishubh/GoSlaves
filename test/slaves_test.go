@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func BenchmarkSlaves(b *testing.B) {
+func BenchmarkSlavesReq(b *testing.B) {
 	var requests uint32
 
 	ln, err := net.Listen("tcp4", ":6666")
@@ -35,6 +35,7 @@ func BenchmarkSlaves(b *testing.B) {
 
 				atomic.AddUint32(&requests, 1)
 			},
+			Limit: 400,
 		}
 		sp.Open()
 		defer sp.Close()

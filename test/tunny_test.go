@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func BenchmarkTunny(b *testing.B) {
+func BenchmarkTunnyReq(b *testing.B) {
 	var requests uint32
 
 	ln, err := net.Listen("tcp", ":6664")
@@ -21,12 +21,12 @@ func BenchmarkTunny(b *testing.B) {
 	atomic.StoreUint32(&requests, 0)
 
 	go func() {
-		sp, _ := tunny.CreatePool(4, func(obj interface{}) interface{} {
+		sp, _ := tunny.CreatePool(400, func(obj interface{}) interface{} {
 			conn := obj.(net.Conn)
 			defer conn.Close()
 
 			if _, err := conn.Write([]byte("Hello guys")); err != nil {
-				panic(err)
+				return nil
 			}
 
 			atomic.AddUint32(&requests, 1)
@@ -55,7 +55,7 @@ func BenchmarkTunny(b *testing.B) {
 
 				conn, err := net.Dial("tcp4", "127.0.0.1:6664")
 				if err != nil {
-					panic(err)
+					return
 				}
 				defer conn.Close()
 

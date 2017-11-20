@@ -8,9 +8,7 @@ Time: 1.044343322s
 goos: linux
 goarch: amd64
 BenchmarkTunnyHTTP-4   	       1	1044699126 ns/op
-
-
-
+---------------------------------------------------
 mester > go test -bench=SlavesHTTP
 200: 406
 500: 0
@@ -21,3 +19,16 @@ Time: 1.027998508s
 goos: linux
 goarch: amd64
 BenchmarkSlavesHTTP-4   	       1	1029358507 ns/op
+====================================================
+mester > go test -bench=TunnyReq
+served 304
+goos: linux
+goarch: amd64
+BenchmarkTunnyReq-4   	       1	2079443057 ns/op
+----------------------------------------------------
+mester > go test -bench=SlavesReq
+served 1018
+goos: linux
+goarch: amd64
+BenchmarkSlavesReq-4   	       1	3119479098 ns/op
+
