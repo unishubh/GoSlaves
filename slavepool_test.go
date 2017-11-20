@@ -1,19 +1,19 @@
 package slaves
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestServe_SlavePool(t *testing.T) {
 	sp := &SlavePool{
 		Work: func(obj interface{}) {
-			if obj == nil {
-				panic("is nil")
-			}
+			fmt.Println(obj)
 		},
 	}
 	sp.Open()
@@ -25,6 +25,8 @@ func TestServe_SlavePool(t *testing.T) {
 			sp.Serve(files[i].Name())
 		}
 	}
+
+	time.Sleep(time.Second)
 }
 
 func BenchmarkServe_SlavePool(b *testing.B) {
