@@ -24,17 +24,17 @@ func BenchmarkTunnyHTTP(b *testing.B) {
 	}
 
 	go func() {
-		sp, _ := tunny.CreatePool(120, func(obj interface{}) interface{} {
-			server.ServeConn(obj.(net.Conn))
+		sp, _ := tunny.CreatePool(500, func(obj interface{}) interface{} {
+			conn := obj.(net.Conn)
+			server.ServeConn(conn)
+			conn.Close()
 			return nil
 		}).Open()
 		defer sp.Close()
 
 		for {
 			conn, err := ln.Accept()
-			if err != nil {
-				time.Sleep(time.Second)
-			} else {
+			if err == nil {
 				sp.SendWorkAsync(conn, nil)
 			}
 		}
@@ -44,27 +44,25 @@ func BenchmarkTunnyHTTP(b *testing.B) {
 	var wg sync.WaitGroup
 	now := time.Now()
 	for p := 0; p < 500; p++ {
-		for i := 0; i < 400; i++ {
-			c := fasthttp.Client{}
+		c := fasthttp.Client{}
 
-			wg.Add(1)
-			go func() {
-				sc, _, err := c.GetTimeout(nil, "http://localhost:6667", time.Second*2)
-				if err != nil {
-					atomic.AddUint32(&timeout, 1)
-				} else {
-					switch {
-					case sc < 300:
-						atomic.AddUint32(&ok, 1)
-					case sc > 499:
-						atomic.AddUint32(&er, 1)
-					default:
-						atomic.AddUint32(&ot, 1)
-					}
+		wg.Add(1)
+		go func() {
+			sc, _, err := c.GetTimeout(nil, "http://localhost:6667", time.Second)
+			if err != nil {
+				atomic.AddUint32(&timeout, 1)
+			} else {
+				switch {
+				case sc < 300:
+					atomic.AddUint32(&ok, 1)
+				case sc > 499:
+					atomic.AddUint32(&er, 1)
+				default:
+					atomic.AddUint32(&ot, 1)
 				}
-				wg.Done()
-			}()
-		}
+			}
+			wg.Done()
+		}()
 	}
 	wg.Wait()
 	fmt.Println(fmt.Sprintf("200: %d\n500: %d\nOther: %d\nTimed out: %d\n\nTime: %v",
