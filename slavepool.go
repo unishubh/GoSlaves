@@ -39,29 +39,17 @@ func (sp *SlavePool) Open() {
 	}
 
 	go func() {
-		var p sync.Pool
-		for {
+		for !sp.stop {
 			time.Sleep(sp.Timeout)
 			for {
-				sl := sp.ready.Get()
-				if sl == nil {
+				if atomic.LoadInt32(&sp.working) <= sp.MinSlaves {
 					break
 				}
-				s := sl.(*Slave)
-				if time.Since(s.lastUsage) > sp.Timeout {
-					s.ch <- nil
-					close(s.ch)
-				} else {
-					p.Put(s)
-				}
-			}
-			for {
-				sl := p.Get()
-				if sl == nil {
+				s := sp.ready.Get()
+				if s == nil {
 					break
 				}
-				s := sl.(*Slave)
-				sp.ready.Put(s)
+				s.(chan interface{}) <- nil
 			}
 		}
 	}()
@@ -77,30 +65,26 @@ func (sp *SlavePool) Open() {
 					if int32(sp.Limit) > atomic.LoadInt32(&sp.working) {
 						// create new slave
 						atomic.AddInt32(&sp.working, 1)
+						ch := make(chan interface{}, 1)
+						sp.ready.Put(ch)
 						go func() {
 							defer atomic.AddInt32(&sp.working, -1)
-							s := &Slave{
-								ch:        make(chan interface{}),
-								lastUsage: time.Now(),
-							}
-							sp.ready.Put(s)
-							for t := range s.ch {
+							for t := range ch {
 								if t == nil {
+									close(ch)
 									return
 								}
 								sp.Work(t)
-								s.lastUsage = time.Now()
-								sp.ready.Put(s)
+								sp.ready.Put(ch)
 							}
 						}()
-						sp.pool.Put(task)
+						ch <- task
 					} else {
 						// re-add to task queue
 						sp.pool.Put(task)
 					}
 				} else {
-					sl := s.(*Slave)
-					sl.ch <- task
+					s.(chan interface{}) <- task
 				}
 			}
 		}

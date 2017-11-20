@@ -48,30 +48,30 @@ func BenchmarkSlaves(b *testing.B) {
 				continue
 			}
 
-			if !sp.Serve(conn) {
-				panic("false")
-			}
+			sp.Serve(conn)
 		}
 	}()
 
 	var wg sync.WaitGroup
-	wg.Add(3000)
-	for i := 0; i < 3000; i++ {
-		go func() {
-			defer wg.Done()
+	for p := 0; p < 500; p++ {
+		for i := 0; i < 400; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 
-			conn, err := net.Dial("tcp4", "127.0.0.1:6666")
-			if err != nil {
-				panic(err)
-			}
-			defer conn.Close()
+				conn, err := net.Dial("tcp4", "127.0.0.1:6666")
+				if err != nil {
+					return
+				}
+				defer conn.Close()
 
-			conn.SetReadDeadline(time.Now().Add(time.Second))
+				conn.SetReadDeadline(time.Now().Add(time.Second))
 
-			if _, err := ioutil.ReadAll(conn); err != nil {
-				return
-			}
-		}()
+				if _, err := ioutil.ReadAll(conn); err != nil {
+					return
+				}
+			}()
+		}
 	}
 	wg.Wait()
 

@@ -47,25 +47,27 @@ func BenchmarkTunny(b *testing.B) {
 	}()
 
 	var wg sync.WaitGroup
-	wg.Add(3000)
-	for i := 0; i < 3000; i++ {
-		go func() {
-			defer wg.Done()
+	for p := 0; p < 500; p++ {
+		for i := 0; i < 400; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 
-			conn, err := net.Dial("tcp4", "127.0.0.1:6664")
-			if err != nil {
-				panic(err)
-			}
-			defer conn.Close()
+				conn, err := net.Dial("tcp4", "127.0.0.1:6664")
+				if err != nil {
+					panic(err)
+				}
+				defer conn.Close()
 
-			conn.SetReadDeadline(time.Now().Add(time.Second))
+				conn.SetReadDeadline(time.Now().Add(time.Second))
 
-			data := make([]byte, 10)
-			if _, err = conn.Read(data); err != nil {
-				return
-			}
-			data = nil
-		}()
+				data := make([]byte, 10)
+				if _, err = conn.Read(data); err != nil {
+					return
+				}
+				data = nil
+			}()
+		}
 	}
 	wg.Wait()
 
