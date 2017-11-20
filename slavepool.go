@@ -62,29 +62,27 @@ func (sp *SlavePool) Open() {
 				// get one slave from pool
 				s := sp.ready.Get()
 				if s == nil {
-					for i := 0; i < 2; i++ {
-						if int32(sp.Limit) > atomic.LoadInt32(&sp.working) {
+					if int32(sp.Limit) > atomic.LoadInt32(&sp.working) {
+						go func() {
+							atomic.AddInt32(&sp.working, 1)
+							ch := make(chan interface{}, 1)
+							sp.ready.Put(ch)
 							go func() {
-								atomic.AddInt32(&sp.working, 1)
-								ch := make(chan interface{}, 1)
-								sp.ready.Put(ch)
-								go func() {
-									defer atomic.AddInt32(&sp.working, -1)
-									for t := range ch {
-										if t == nil {
-											close(ch)
-											return
-										}
-										sp.Work(t)
-										sp.ready.Put(ch)
+								defer atomic.AddInt32(&sp.working, -1)
+								for t := range ch {
+									if t == nil {
+										close(ch)
+										return
 									}
-								}()
-								ch <- task
+									sp.Work(t)
+									sp.ready.Put(ch)
+								}
 							}()
-						} else {
-							// re-add to task queue
 							sp.pool.Put(task)
-						}
+						}()
+					} else {
+						// re-add to task queue
+						sp.pool.Put(task)
 					}
 				} else {
 					s.(chan interface{}) <- task
