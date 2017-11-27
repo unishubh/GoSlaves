@@ -32,6 +32,7 @@ func (sp *SlavePool) Open() {
 		panic("Pool is running already")
 	}
 
+	sp.running = true
 	sp.ch = make(chan interface{}, 1)
 	sp.stop = make(chan struct{})
 	if sp.timeout <= 0 {
@@ -105,7 +106,9 @@ func (sp *SlavePool) Open() {
 }
 
 func (sp *SlavePool) Serve(job interface{}) {
-	sp.ch <- job
+	if sp.running {
+		sp.ch <- job
+	}
 }
 
 func (sp *SlavePool) Close() {

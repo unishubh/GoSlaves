@@ -26,7 +26,7 @@ func TestServe_SlavePool(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond * 10)
 }
 
 func BenchmarkServe_SlavePool(b *testing.B) {
