@@ -33,7 +33,7 @@ func (sp *SlavePool) Open() {
 	}
 
 	sp.running = true
-	sp.ch = make(chan interface{}, 1)
+	sp.ch = make(chan interface{}, 2)
 	sp.stop = make(chan struct{})
 	if sp.timeout <= 0 {
 		sp.timeout = defaultTime
