@@ -2,34 +2,47 @@ package slaves
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 var (
-	defaultTime = time.Second * 5
+	defaultTime = time.Second * 10
 )
 
+// This library follows the FILO scheme
+type slave struct {
+	ch        chan interface{}
+	lastUsage time.Time
+}
+
 type SlavePool struct {
-	pool    sync.Pool
-	ready   sync.Pool
-	stop    bool
+	lock    sync.Mutex
+	ready   []*slave
+	stop    chan struct{}
 	working int32
 	// SlavePool work
 	Work func(interface{})
 	// Limit of slaves
 	Limit uint
+	ch    chan interface{}
 	// Minimum number of slaves
 	// waiting for tasks
 	MinSlaves int
 	// Time to reassign slaves
-	Timeout time.Duration
+	timeout time.Duration
+	running bool
 }
 
 func (sp *SlavePool) Open() {
+	if sp.running {
+		panic("Pool is running already")
+	}
+
 	sp.working = 0
-	if sp.Timeout <= 0 {
-		sp.Timeout = defaultTime
+	sp.ch = make(chan interface{}, 1)
+	sp.stop = make(chan struct{})
+	if sp.timeout <= 0 {
+		sp.timeout = defaultTime
 	}
 	if sp.MinSlaves <= 0 {
 		sp.MinSlaves = 5
@@ -39,63 +52,87 @@ func (sp *SlavePool) Open() {
 	}
 
 	go func() {
-		for !sp.stop {
-			time.Sleep(sp.Timeout)
-			for {
-				if atomic.LoadInt32(&sp.working) <= int32(sp.MinSlaves) {
-					break
+		var tmp []*slave
+		time.Sleep(sp.timeout)
+		for {
+			sp.lock.Lock()
+			i, n, ready := 0, len(sp.ready), sp.ready
+			for i < n && time.Since(ready[i].lastUsage) > sp.timeout {
+				i++
+				println(i)
+			}
+			tmp = append(tmp[:0], ready[:i]...)
+			if i > 0 {
+				m := copy(ready, ready[i:])
+				for i = m; i < n; i++ {
+					ready = nil
 				}
-				s := sp.ready.Get()
-				if s == nil {
-					break
-				}
-				s.(chan interface{}) <- nil
+				sp.ready = ready[:m]
+			}
+			sp.lock.Unlock()
+
+			for _, ch := range tmp {
+				ch.ch <- nil
 			}
 		}
 	}()
+
 	go func() {
-		for !sp.stop {
-			task := sp.pool.Get()
-			if task == nil {
-				time.Sleep(time.Millisecond * 20)
-			} else {
-				// get one slave from pool
-				s := sp.ready.Get()
-				if s == nil {
-					if int32(sp.Limit) > atomic.LoadInt32(&sp.working) {
-						go func() {
-							atomic.AddInt32(&sp.working, 1)
-							ch := make(chan interface{}, 1)
-							sp.ready.Put(ch)
-							go func() {
-								defer atomic.AddInt32(&sp.working, -1)
-								for t := range ch {
-									if t == nil {
-										close(ch)
-										return
-									}
-									sp.Work(t)
-									sp.ready.Put(ch)
-								}
-							}()
-							sp.pool.Put(task)
-						}()
-					} else {
-						// re-add to task queue
-						sp.pool.Put(task)
-					}
+		for {
+			select {
+			case job := <-sp.ch:
+				sv := &slave{}
+				sp.lock.Lock()
+				n := len(sp.ready) - 1
+				if n <= 0 {
+					sv.ch = make(chan interface{}, 1)
+					sv.lastUsage = time.Now()
+					go func(s *slave) {
+						for job := range s.ch {
+							if job == nil {
+								close(s.ch)
+								return
+							}
+							sp.Work(job)
+							s.lastUsage = time.Now()
+
+							sp.lock.Lock()
+							sp.ready = append(sp.ready, s)
+							sp.lock.Unlock()
+						}
+					}(sv)
 				} else {
-					s.(chan interface{}) <- task
+					sv = sp.ready[n]
+					sp.ready = sp.ready[:n]
 				}
+				sp.lock.Unlock()
+				sv.ch <- job
+			case <-sp.stop:
+				close(sp.stop)
+				return
 			}
 		}
 	}()
 }
 
 func (sp *SlavePool) Serve(job interface{}) {
-	go sp.pool.Put(job)
+	sp.ch <- job
 }
 
 func (sp *SlavePool) Close() {
-	sp.stop = true
+	sp.lock.Lock()
+	ready := sp.ready
+	sp.running = false
+	sp.lock.Unlock()
+
+	for _, sv := range ready {
+		sv.ch <- nil
+	}
+	close(sp.ch)
+
+	sp.stop <- struct{}{}
+}
+
+func (sp *SlavePool) SetTimeout(secs int) {
+	sp.timeout = time.Duration(secs) * time.Second
 }
