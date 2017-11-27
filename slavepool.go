@@ -74,7 +74,7 @@ func (sp *SlavePool) Open() {
 				sv := &slave{}
 				sp.lock.Lock()
 				n := len(sp.ready) - 1
-				if n <= 0 {
+				if n < 0 {
 					sv.ch = make(chan interface{}, 1)
 					sv.lastUsage = time.Now()
 					go func(s *slave) {
