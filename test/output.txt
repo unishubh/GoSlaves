@@ -1,34 +1,47 @@
-mester > go test -bench=TunnyHTTP
-200: 157
+# Generated using:
+# > go test -bench=TunnyReq -benchmem > output.txt
+# > echo "=======================================================" >> output.txt
+# > go test -bench=SlavesReq -benchmem >> output.txt
+# > echo "=======================================================" >> output.txt;
+# > go test -bench=TunnyHTTP -benchmem >> output.txt
+# > echo "=======================================================" >> output.txt;
+# > go test -bench=SlavesHTTP -benchmem >> output.txt;
+
+
+served 336
+goos: linux
+goarch: amd64
+BenchmarkTunnyReq-4   	       1	2096774619 ns/op	115299008 B/op	 2210532 allocs/op
+PASS
+ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	2.130s
+=======================================================
+served 1082
+goos: linux
+goarch: amd64
+BenchmarkSlavesReq-4   	       1	4130582609 ns/op	110173976 B/op	 2190906 allocs/op
+PASS
+ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	4.163s
+=======================================================
+200: 173
 500: 0
 Other: 0
-Timed out: 343
+Timed out: 327
 
-Time: 1.044343322s
+Time: 1.047718429s
 goos: linux
 goarch: amd64
-BenchmarkTunnyHTTP-4   	       1	1044699126 ns/op
----------------------------------------------------
-mester > go test -bench=SlavesHTTP
-200: 406
+BenchmarkTunnyHTTP-4   	       1	1048286702 ns/op	22499008 B/op	  187038 allocs/op
+PASS
+ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	1.072s
+=======================================================
+200: 296
 500: 0
 Other: 0
-Timed out: 94
+Timed out: 204
 
-Time: 1.027998508s
+Time: 1.04034423s
 goos: linux
 goarch: amd64
-BenchmarkSlavesHTTP-4   	       1	1029358507 ns/op
-====================================================
-mester > go test -bench=TunnyReq
-served 304
-goos: linux
-goarch: amd64
-BenchmarkTunnyReq-4   	       1	2079443057 ns/op
-----------------------------------------------------
-mester > go test -bench=SlavesReq
-served 1018
-goos: linux
-goarch: amd64
-BenchmarkSlavesReq-4   	       1	3119479098 ns/op
-
+BenchmarkSlavesHTTP-4   	       1	1040673870 ns/op	 7048448 B/op	   32609 allocs/op
+PASS
+ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	1.060s

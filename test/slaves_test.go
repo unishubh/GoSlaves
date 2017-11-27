@@ -35,7 +35,6 @@ func BenchmarkSlavesReq(b *testing.B) {
 
 				atomic.AddUint32(&requests, 1)
 			},
-			Limit: 400,
 		}
 		sp.Open()
 		defer sp.Close()
