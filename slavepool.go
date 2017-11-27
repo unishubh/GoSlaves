@@ -37,22 +37,18 @@ func (sp *SlavePool) Open() {
 	if sp.timeout <= 0 {
 		sp.timeout = defaultTime
 	}
-	if sp.MinSlaves <= 0 {
-		sp.MinSlaves = 5
-	}
-	if sp.Limit <= 0 {
-		sp.Limit = 1024 * 256
-	}
 
 	go func() {
 		var tmp []*slave
-		time.Sleep(sp.timeout)
 		for {
+			time.Sleep(sp.timeout)
 			sp.lock.Lock()
-			i, n, ready := 0, len(sp.ready), sp.ready
-			for i < n && time.Since(ready[i].lastUsage) > sp.timeout {
-				i++
-				println(i)
+			i, ready := 0, sp.ready
+			n := len(ready)
+			for c := 0; c < n; c++ {
+				if time.Since(ready[i].lastUsage) > sp.timeout {
+					i++
+				}
 			}
 			tmp = append(tmp[:0], ready[:i]...)
 			if i > 0 {
@@ -60,7 +56,7 @@ func (sp *SlavePool) Open() {
 				for i = m; i < n; i++ {
 					ready = nil
 				}
-				sp.ready = ready[:m]
+				sp.ready = ready
 			}
 			sp.lock.Unlock()
 
