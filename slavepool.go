@@ -16,18 +16,12 @@ type slave struct {
 }
 
 type SlavePool struct {
-	lock    sync.Mutex
-	ready   []*slave
-	stop    chan struct{}
-	working int32
+	lock  sync.Mutex
+	ready []*slave
+	stop  chan struct{}
 	// SlavePool work
 	Work func(interface{})
-	// Limit of slaves
-	Limit uint
-	ch    chan interface{}
-	// Minimum number of slaves
-	// waiting for tasks
-	MinSlaves int
+	ch   chan interface{}
 	// Time to reassign slaves
 	timeout time.Duration
 	running bool
@@ -38,7 +32,6 @@ func (sp *SlavePool) Open() {
 		panic("Pool is running already")
 	}
 
-	sp.working = 0
 	sp.ch = make(chan interface{}, 1)
 	sp.stop = make(chan struct{})
 	if sp.timeout <= 0 {
