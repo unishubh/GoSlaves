@@ -33,8 +33,8 @@ func (sp *SlavePool) Open() {
 	}
 
 	sp.running = true
-	sp.ch = make(chan interface{}, 2)
-	sp.stop = make(chan struct{})
+	sp.ch = make(chan interface{}, 1)
+	sp.stop = make(chan struct{}, 1)
 	if sp.timeout <= 0 {
 		sp.timeout = defaultTime
 	}
@@ -55,7 +55,7 @@ func (sp *SlavePool) Open() {
 			if i > 0 {
 				m := copy(ready, ready[i:])
 				for i = m; i < n; i++ {
-					ready = nil
+					ready[i] = nil
 				}
 				sp.ready = ready
 			}
@@ -99,6 +99,7 @@ func (sp *SlavePool) Open() {
 				sv.ch <- job
 			case <-sp.stop:
 				close(sp.stop)
+				close(sp.ch)
 				return
 			}
 		}
@@ -118,10 +119,10 @@ func (sp *SlavePool) Close() {
 	sp.lock.Unlock()
 
 	for _, sv := range ready {
-		sv.ch <- nil
+		if sv != nil {
+			sv.ch <- nil
+		}
 	}
-	close(sp.ch)
-
 	sp.stop <- struct{}{}
 }
 
