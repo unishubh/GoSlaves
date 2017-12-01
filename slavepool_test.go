@@ -29,6 +29,26 @@ func TestServe_SlavePool(t *testing.T) {
 	time.Sleep(time.Millisecond * 10)
 }
 
+func TestServe2_SlavePool(t *testing.T) {
+	sp := &SlavePool{
+		Work: func(obj interface{}) {
+			fmt.Println(obj)
+		},
+	}
+	sp.Open()
+	defer sp.Close()
+
+	sp.SetTimeout(1)
+
+	files, err := ioutil.ReadDir(os.TempDir())
+	if err == nil {
+		for i := range files {
+			time.Sleep(time.Millisecond * 100)
+			sp.Serve(files[i].Name())
+		}
+	}
+}
+
 func BenchmarkServe_SlavePool(b *testing.B) {
 	ln, err := net.Listen("tcp4", ":6666")
 	if err != nil {

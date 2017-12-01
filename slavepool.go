@@ -16,7 +16,7 @@ type slave struct {
 }
 
 type SlavePool struct {
-	lock  sync.Mutex
+	lock  sync.RWMutex
 	ready []*slave
 	stop  chan struct{}
 	// SlavePool work
@@ -41,61 +41,61 @@ func (sp *SlavePool) Open() {
 
 	go func() {
 		var tmp []*slave
+		var c int    // number of workers to be delete
+		var i, l int // iterator and len
 		for {
 			time.Sleep(sp.timeout)
+			t := time.Now()
 			sp.lock.Lock()
-			i, ready := 0, sp.ready
-			n := len(ready)
-			for c := 0; c < n; c++ {
-				if time.Since(ready[c].lastUsage) > sp.timeout {
-					i++
+			for i = 0; i < 0; i++ {
+				if t.Sub(sp.ready[i].lastUsage) > sp.timeout {
+					c++
 				}
 			}
-			tmp = append(tmp[:0], ready[:i]...)
-			if i > 0 {
-				m := copy(ready, ready[i:])
-				for i = m; i < n; i++ {
-					ready[i] = nil
-				}
-				sp.ready = ready
-			}
+			tmp = append(tmp[:0], sp.ready[c:]...)
+			sp.ready = sp.ready[:c]
 			sp.lock.Unlock()
-
-			for _, ch := range tmp {
-				ch.ch <- nil
+			for i, l = 0, len(tmp); i < l; i++ {
+				tmp[i].ch <- nil
 			}
 		}
 	}()
 
 	go func() {
+		var n int
+		sv := &slave{}
 		for {
 			select {
 			case job := <-sp.ch:
-				sv := &slave{}
 				sp.lock.Lock()
-				n := len(sp.ready)
-				if n == 0 {
+				n = len(sp.ready) - 1
+				if n < 0 {
 					n++
 					sv.ch = make(chan interface{}, 1)
 					sp.ready = append(sp.ready, sv)
 					go func(s *slave) {
-						sv.lastUsage = time.Now()
-						for job := range s.ch {
-							if job == nil {
-								close(s.ch)
-								return
-							}
-							sp.Work(job)
-							s.lastUsage = time.Now()
+						s.lastUsage = time.Now()
+						for {
+							select {
+							case job, ok := <-s.ch:
+								if !ok {
+									return
+								}
+								if job == nil {
+									return
+								}
+								sp.Work(job)
+								s.lastUsage = time.Now()
 
-							sp.lock.Lock()
-							sp.ready = append(sp.ready, s)
-							sp.lock.Unlock()
+								sp.lock.Lock()
+								sp.ready = append(sp.ready, s)
+								sp.lock.Unlock()
+							}
 						}
 					}(sv)
 				}
-				sv = sp.ready[n-1]
-				sp.ready = sp.ready[:n-1]
+				sv = sp.ready[n]
+				sp.ready = sp.ready[:n]
 				sp.lock.Unlock()
 				sv.ch <- job
 			case <-sp.stop:
