@@ -47,7 +47,7 @@ func (sp *SlavePool) Open() {
 			i, ready := 0, sp.ready
 			n := len(ready)
 			for c := 0; c < n; c++ {
-				if time.Since(ready[i].lastUsage) > sp.timeout {
+				if time.Since(ready[c].lastUsage) > sp.timeout {
 					i++
 				}
 			}
@@ -73,11 +73,13 @@ func (sp *SlavePool) Open() {
 			case job := <-sp.ch:
 				sv := &slave{}
 				sp.lock.Lock()
-				n := len(sp.ready) - 1
-				if n < 0 {
+				n := len(sp.ready)
+				if n == 0 {
+					n++
 					sv.ch = make(chan interface{}, 1)
-					sv.lastUsage = time.Now()
+					sp.ready = append(sp.ready, sv)
 					go func(s *slave) {
+						sv.lastUsage = time.Now()
 						for job := range s.ch {
 							if job == nil {
 								close(s.ch)
@@ -91,10 +93,9 @@ func (sp *SlavePool) Open() {
 							sp.lock.Unlock()
 						}
 					}(sv)
-				} else {
-					sv = sp.ready[n]
-					sp.ready = sp.ready[:n]
 				}
+				sv = sp.ready[n-1]
+				sp.ready = sp.ready[:n-1]
 				sp.lock.Unlock()
 				sv.ch <- job
 			case <-sp.stop:
