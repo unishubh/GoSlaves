@@ -63,10 +63,11 @@ func (sp *SlavePool) Open() {
 
 	go func() {
 		var n int
+		var job interface{}
 		sv := &slave{}
 		for {
 			select {
-			case job := <-sp.ch:
+			case job = <-sp.ch:
 				sp.lock.Lock()
 				n = len(sp.ready) - 1
 				if n < 0 {
@@ -74,10 +75,12 @@ func (sp *SlavePool) Open() {
 					sv.ch = make(chan interface{}, 1)
 					sp.ready = append(sp.ready, sv)
 					go func(s *slave) {
+						var ok bool
+						var job interface{}
 						s.lastUsage = time.Now()
 						for {
 							select {
-							case job, ok := <-s.ch:
+							case job, ok = <-s.ch:
 								if !ok {
 									return
 								}
