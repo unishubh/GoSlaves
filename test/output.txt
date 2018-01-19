@@ -34,14 +34,14 @@ BenchmarkTunnyHTTP-4   	       1	1048286702 ns/op	22499008 B/op	  187038 allocs/
 PASS
 ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	1.072s
 =======================================================
-200: 296
+200: 329
 500: 0
 Other: 0
-Timed out: 204
+Timed out: 171
 
-Time: 1.04034423s
+Time: 1.053443546s
 goos: linux
 goarch: amd64
-BenchmarkSlavesHTTP-4   	       1	1040673870 ns/op	 7048448 B/op	   32609 allocs/op
+BenchmarkSlavesHTTP-4   	       1	1053804541 ns/op	 8297840 B/op	   36005 allocs/op
 PASS
-ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	1.060s
+ok  	_/home/mester/ownCloud/Programacion/Go/Packages/GoSlaves/test	1.077s

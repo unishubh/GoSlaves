@@ -38,8 +38,6 @@ func TestServe2_SlavePool(t *testing.T) {
 	sp.Open()
 	defer sp.Close()
 
-	sp.SetTimeout(1)
-
 	files, err := ioutil.ReadDir(os.TempDir())
 	if err == nil {
 		for i := range files {

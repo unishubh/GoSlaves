@@ -15,15 +15,47 @@ type slave struct {
 	lastUsage time.Time
 }
 
+func (s *slave) close() {
+	if s.ch != nil {
+		close(s.ch)
+		s.ch = nil
+	}
+}
+
+func cleanSlaves(locker sync.RWMutex, slaves *[]*slave) {
+	var tmp []*slave
+	var c int    // number of workers to be delete
+	var i, l int // iterator and len
+	for {
+		time.Sleep(defaultTime)
+		if len(*slaves) == 0 {
+			continue
+		}
+		t := time.Now()
+		locker.Lock()
+		for i = 0; i < 0; i++ {
+			if t.Sub((*slaves)[i].lastUsage) > defaultTime {
+				c++
+			}
+		}
+		tmp = append(tmp[:0], (*slaves)[c:]...)
+		*slaves = (*slaves)[:c]
+		locker.Unlock()
+		for i, l = 0, len(tmp); i < l; i++ {
+			// closing
+			tmp[i].ch <- nil
+		}
+		tmp = nil
+	}
+}
+
 type SlavePool struct {
 	lock  sync.RWMutex
 	ready []*slave
 	stop  chan struct{}
 	// SlavePool work
-	Work func(interface{})
-	ch   chan interface{}
-	// Time to reassign slaves
-	timeout time.Duration
+	Work    func(interface{})
+	ch      chan interface{}
 	running bool
 }
 
@@ -35,31 +67,9 @@ func (sp *SlavePool) Open() {
 	sp.running = true
 	sp.ch = make(chan interface{}, 1)
 	sp.stop = make(chan struct{}, 1)
-	if sp.timeout <= 0 {
-		sp.timeout = defaultTime
-	}
+	sp.ready = make([]*slave, 0)
 
-	go func() {
-		var tmp []*slave
-		var c int    // number of workers to be delete
-		var i, l int // iterator and len
-		for {
-			time.Sleep(sp.timeout)
-			t := time.Now()
-			sp.lock.Lock()
-			for i = 0; i < 0; i++ {
-				if t.Sub(sp.ready[i].lastUsage) > sp.timeout {
-					c++
-				}
-			}
-			tmp = append(tmp[:0], sp.ready[c:]...)
-			sp.ready = sp.ready[:c]
-			sp.lock.Unlock()
-			for i, l = 0, len(tmp); i < l; i++ {
-				tmp[i].ch <- nil
-			}
-		}
-	}()
+	go cleanSlaves(sp.lock, &sp.ready)
 
 	go func() {
 		var n int
@@ -75,25 +85,19 @@ func (sp *SlavePool) Open() {
 					sv.ch = make(chan interface{}, 1)
 					sp.ready = append(sp.ready, sv)
 					go func(s *slave) {
-						var ok bool
 						var job interface{}
 						s.lastUsage = time.Now()
-						for {
-							select {
-							case job, ok = <-s.ch:
-								if !ok {
-									return
-								}
-								if job == nil {
-									return
-								}
-								sp.Work(job)
-								s.lastUsage = time.Now()
-
-								sp.lock.Lock()
-								sp.ready = append(sp.ready, s)
-								sp.lock.Unlock()
+						for job = range s.ch {
+							if job == nil {
+								s.close()
+								return
 							}
+							sp.Work(job)
+							s.lastUsage = time.Now()
+
+							sp.lock.Lock()
+							sp.ready = append(sp.ready, s)
+							sp.lock.Unlock()
 						}
 					}(sv)
 				}
@@ -117,19 +121,18 @@ func (sp *SlavePool) Serve(job interface{}) {
 }
 
 func (sp *SlavePool) Close() {
+	sp.stop <- struct{}{}
+
 	sp.lock.Lock()
 	ready := sp.ready
 	sp.running = false
-	sp.lock.Unlock()
 
 	for _, sv := range ready {
 		if sv != nil {
-			sv.ch <- nil
+			sp.lock.Unlock()
+			sv.close()
+			sp.lock.Lock()
 		}
 	}
-	sp.stop <- struct{}{}
-}
-
-func (sp *SlavePool) SetTimeout(secs int) {
-	sp.timeout = time.Duration(secs) * time.Second
+	sp.lock.Unlock()
 }
