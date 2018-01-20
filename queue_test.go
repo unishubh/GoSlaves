@@ -5,13 +5,14 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestServe_Queue(t *testing.T) {
 	queue := DoQueue(5, func(obj interface{}) {
 		fmt.Println(obj)
 	})
-	defer queue.WaitClose()
+	defer queue.Close()
 
 	files, err := ioutil.ReadDir(os.TempDir())
 	if err == nil {
@@ -19,4 +20,5 @@ func TestServe_Queue(t *testing.T) {
 			queue.Serve(files[i].Name())
 		}
 	}
+	time.Sleep(time.Second)
 }

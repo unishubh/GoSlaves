@@ -9,60 +9,59 @@ import (
 // Queue allows programmer to stack tasks.
 type Queue struct {
 	closed  bool
-	locker  sync.RWMutex
 	jobs    []interface{}
 	slaves  []*slave
-	ch      chan struct{}
 	max     int
 	current int32
-	wg      sync.WaitGroup
+	locker  sync.RWMutex
+	ready   sync.Mutex
+	cond    *sync.Cond
+	rcond   *sync.Cond
+	ok      chan struct{}
 }
 
 // max is the maximum goroutines to execute.
 // 0 is the same as no limit
 func DoQueue(max int, work func(obj interface{})) *Queue {
-	ch := make(chan struct{}, 1)
-
 	queue := &Queue{
+		closed: false,
 		max:    max,
-		ch:     ch,
+		ok:     make(chan struct{}),
 		jobs:   make([]interface{}, 0),
 		slaves: make([]*slave, 0),
 	}
+	queue.cond = sync.NewCond(&queue.locker)
+	queue.rcond = sync.NewCond(&queue.ready)
 
 	go cleanSlaves(queue.locker, &queue.slaves)
-
-	queue.wg.Add(1)
-	go func() {
-		defer queue.wg.Done()
-		for !queue.closed {
-			time.Sleep(time.Millisecond * 20)
-			queue.locker.Lock()
-			if len(queue.jobs) > 0 {
-				ch <- struct{}{}
-			}
-			queue.locker.Unlock()
-		}
-	}()
 
 	go func() {
 		// selected slave
 		var s *slave
 		var c interface{}
 		m := int32(max)
-		for range ch {
-			for _, c = range queue.jobs {
-				queue.locker.Lock()
-				// getting job to do
-				if len(queue.jobs) > 1 {
-					queue.jobs = queue.jobs[1:]
-				} else {
-					queue.jobs = queue.jobs[:0]
+		var i, l int
+		for {
+			queue.locker.Lock()
+			l = len(queue.jobs)
+			if l == 0 {
+				if queue.closed {
+					queue.ok <- struct{}{}
+					return
 				}
+				queue.cond.Wait()
+			}
+			for i, l = 0, len(queue.jobs); i < l; i++ {
+				if l == 0 && queue.closed {
+					queue.ok <- struct{}{}
+					return
+				}
+				// getting job to do
+				c = queue.jobs[0]
+				queue.ready.Lock()
 				if len(queue.slaves) == 0 {
 					if atomic.LoadInt32(&queue.current) >= m {
-						queue.jobs = append(queue.jobs, c)
-						continue
+						queue.rcond.Wait()
 					} else {
 						s = &slave{
 							ch:        make(chan interface{}, 1),
@@ -79,17 +78,27 @@ func DoQueue(max int, work func(obj interface{})) *Queue {
 								}
 								work(w)
 								sv.lastUsage = time.Now()
+								queue.ready.Lock()
+								queue.slaves = append(queue.slaves, sv)
+								queue.ready.Unlock()
+								queue.rcond.Signal()
 							}
 						}(s)
 					}
-				} else {
-					s = queue.slaves[0]
-					queue.slaves = queue.slaves[1:]
 				}
-				queue.locker.Unlock()
+				queue.ready.Unlock()
+				if s == nil {
+					s = queue.slaves[0]
+					queue.slaves = append(queue.slaves[:0], queue.slaves[1:]...)
+				}
+				queue.jobs = append(queue.jobs[:0], queue.jobs[1:]...)
 				// parsing job
+				queue.locker.Unlock()
 				s.ch <- c
+				queue.locker.Lock()
+				s = nil
 			}
+			queue.locker.Unlock()
 		}
 	}()
 
@@ -97,24 +106,14 @@ func DoQueue(max int, work func(obj interface{})) *Queue {
 }
 
 func (queue *Queue) Serve(job interface{}) {
-	queue.locker.Lock()
 	queue.jobs = append(queue.jobs, job)
-	queue.locker.Unlock()
-}
-
-func (queue *Queue) WaitClose() {
-	queue.locker.Lock()
-	queue.closed = true
-	queue.locker.Unlock()
-
-	queue.wg.Wait()
-	queue.Close()
+	queue.cond.Signal()
 }
 
 func (queue *Queue) Close() {
 	queue.closed = true
-	close(queue.ch)
-
+	queue.cond.Signal()
+	<-queue.ok
 	for _, s := range queue.slaves {
 		s.close()
 	}
