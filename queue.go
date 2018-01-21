@@ -67,8 +67,8 @@ func DoQueue(max int, work func(obj interface{})) *Queue {
 							ch:        make(chan interface{}, 1),
 							lastUsage: time.Now(),
 						}
+						atomic.AddInt32(&queue.current, 1)
 						go func(sv *slave) {
-							atomic.AddInt32(&queue.current, 1)
 							defer atomic.AddInt32(&queue.current, -1)
 							var w interface{}
 							for w = range sv.ch {
