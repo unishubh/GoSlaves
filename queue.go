@@ -9,6 +9,7 @@ import (
 // Queue allows programmer to stack tasks.
 type Queue struct {
 	closed  bool
+	stop    bool
 	jobs    []interface{}
 	slaves  []*slave
 	max     int
@@ -106,8 +107,30 @@ func DoQueue(max int, work func(obj interface{})) *Queue {
 }
 
 func (queue *Queue) Serve(job interface{}) {
+	queue.locker.Lock()
 	queue.jobs = append(queue.jobs, job)
+	if queue.stop {
+		queue.locker.Unlock()
+		return
+	}
+	queue.locker.Unlock()
 	queue.cond.Signal()
+}
+
+// Stop stops goroutine execution.
+// When job is sended to pool it will be stored.
+// Jobs will be processed where Resume() is called.
+func (queue *Queue) Stop() {
+	queue.locker.Lock()
+	queue.stop = true
+	queue.locker.Unlock()
+}
+
+// Resume continues goroutine work.
+func (queue *Queue) Resume() {
+	queue.locker.Lock()
+	queue.stop = false
+	queue.locker.Unlock()
 }
 
 func (queue *Queue) Close() {
