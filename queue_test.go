@@ -11,7 +11,7 @@ import (
 func TestServe_Queue(t *testing.T) {
 	queue := DoQueue(5, func(obj interface{}) {
 		fmt.Println(obj)
-		time.Sleep(time.Second * 4)
+		time.Sleep(time.Second * 2)
 	})
 	defer queue.Close()
 

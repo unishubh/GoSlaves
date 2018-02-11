@@ -1,49 +1,45 @@
 package slaves
 
 import (
-	"fmt"
-	"io/ioutil"
 	"net"
-	"os"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestServe_SlavePool(t *testing.T) {
+	ch := make(chan int, 20)
+	cs := make(chan struct{})
 	sp := &SlavePool{
 		Work: func(obj interface{}) {
-			fmt.Println(obj)
+			ch <- obj.(int)
 		},
 	}
 	sp.Open()
 	defer sp.Close()
 
-	files, err := ioutil.ReadDir(os.TempDir())
-	if err == nil {
-		for i := range files {
-			sp.Serve(files[i].Name())
+	go func() {
+		p := 0
+		for range ch {
+			p++
 		}
-	}
-
-	time.Sleep(time.Millisecond * 10)
-}
-
-func TestServe2_SlavePool(t *testing.T) {
-	sp := &SlavePool{
-		Work: func(obj interface{}) {
-			fmt.Println(obj)
-		},
-	}
-	sp.Open()
-	defer sp.Close()
-
-	files, err := ioutil.ReadDir(os.TempDir())
-	if err == nil {
-		for i := range files {
-			time.Sleep(time.Millisecond * 100)
-			sp.Serve(files[i].Name())
+		if p == 20 {
+			cs <- struct{}{}
+		} else {
+			t.Fatal("Bad test: ", p)
 		}
+	}()
+
+	for i := 0; i < 20; i++ {
+		sp.Serve(i)
+	}
+	time.Sleep(time.Second)
+	close(ch)
+
+	select {
+	case <-cs:
+	case <-time.After(time.Second * 2):
+		t.Fatal("timeout")
 	}
 }
 

@@ -82,6 +82,7 @@ func (sp *SlavePool) Open() {
 				n = len(sp.ready) - 1
 				if n < 0 {
 					n++
+					sv = &slave{}
 					sv.ch = make(chan interface{}, 1)
 					sp.ready = append(sp.ready, sv)
 					go func(s *slave) {
@@ -100,8 +101,9 @@ func (sp *SlavePool) Open() {
 							sp.lock.Unlock()
 						}
 					}(sv)
+				} else {
+					sv = sp.ready[n]
 				}
-				sv = sp.ready[n]
 				sp.ready = sp.ready[:n]
 				sp.lock.Unlock()
 				sv.ch <- job
