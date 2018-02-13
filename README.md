@@ -19,11 +19,10 @@ Benchmark
 
 ```
 $ go test -bench=. -benchmem -benchtime=4s
-goos: linux
-goarch: amd64
-BenchmarkGrPool-4      	10000000	       700 ns/op	      40 B/op	       1 allocs/op
-BenchmarkSlavePool-4   	 3000000	      2273 ns/op	      16 B/op	       1 allocs/op
-BenchmarkTunny-4       	 2000000	      3862 ns/op	      32 B/op	       2 allocs/op
+
+BenchmarkGrPool-4      	10000000	       720 ns/op	      40 B/op	       1 allocs/op
+BenchmarkSlavePool-4   	 5000000	      1133 ns/op	      16 B/op	       1 allocs/op
+BenchmarkTunny-4       	 1000000	      4041 ns/op	      32 B/op	       2 allocs/op
 ```
 
 Example
