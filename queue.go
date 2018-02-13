@@ -34,7 +34,7 @@ func DoQueue(max int, work func(obj interface{})) *Queue {
 	queue.cond = sync.NewCond(&queue.locker)
 	queue.rcond = sync.NewCond(&queue.ready)
 
-	go cleanSlaves(queue.locker, &queue.slaves)
+	go hardClean(queue.locker, &queue.slaves)
 
 	go func() {
 		// selected slave

@@ -23,7 +23,7 @@ type slave struct {
 	lastUsage time.Time
 }
 
-func cleanSlaves(locker sync.RWMutex, slaves *[]*slave) {
+func hardClean(locker sync.RWMutex, slaves *[]*slave) {
 	var tmp []*slave
 	var c int    // number of workers to be delete
 	var i, l int // iterator and len
@@ -48,6 +48,22 @@ func cleanSlaves(locker sync.RWMutex, slaves *[]*slave) {
 	}
 }
 
+func softClean(locker sync.RWMutex, slaves *[]*slave) {
+	var i, l int // iterator and len
+	for {
+		time.Sleep(defaultTime)
+		locker.Lock()
+		if len(*slaves) == 0 {
+			locker.Unlock()
+			continue
+		}
+		locker.Unlock()
+		for i = 0; i < l; i++ {
+			(*slaves)[i].ch <- nil
+		}
+	}
+}
+
 type SlavePool struct {
 	lock  sync.RWMutex
 	ready []*slave
@@ -55,7 +71,12 @@ type SlavePool struct {
 	// SlavePool work
 	Work func(interface{})
 	// Size is the size of the job receiver channel
-	Size    int
+	Size int
+	// Clean parameter specify if programmer wants to
+	// clean the goroutine pool
+	//
+	// False is faster
+	Clean   bool
 	ch      chan interface{}
 	running bool
 }
@@ -64,6 +85,7 @@ func (sp *SlavePool) Open() {
 	if sp.running {
 		panic("Pool is running already")
 	}
+	clean := sp.Clean
 
 	if sp.Size <= 0 {
 		sp.Size = 20
@@ -73,7 +95,11 @@ func (sp *SlavePool) Open() {
 	sp.stop = make(chan struct{}, 1)
 	sp.ready = make([]*slave, 0)
 
-	go cleanSlaves(sp.lock, &sp.ready)
+	if clean {
+		go hardClean(sp.lock, &sp.ready)
+	} else {
+		go softClean(sp.lock, &sp.ready)
+	}
 
 	go func() {
 		var n int
@@ -97,7 +123,9 @@ func (sp *SlavePool) Open() {
 							sp.Work(job)
 
 							sp.lock.Lock()
-							s.lastUsage = time.Now()
+							if clean {
+								s.lastUsage = time.Now()
+							}
 							sp.ready = append(sp.ready, s)
 							sp.lock.Unlock()
 						}
