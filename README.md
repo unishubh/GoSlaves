@@ -17,13 +17,17 @@ $ go get -u -v -x github.com/themester/GoSlaves
 Benchmark
 ---------
 
+After a lot of benchmarks and the following enhancings of the package I got this results:
+
 ```
 $ go test -bench=. -benchmem -benchtime=4s
 
-BenchmarkGrPool-4      	10000000	       720 ns/op	      40 B/op	       1 allocs/op
-BenchmarkSlavePool-4   	 5000000	      1133 ns/op	      16 B/op	       1 allocs/op
-BenchmarkTunny-4       	 1000000	      4041 ns/op	      32 B/op	       2 allocs/op
+BenchmarkGrPool-4      	10000000	       711 ns/op	      40 B/op	       1 allocs/op
+BenchmarkSlavePool-4   	10000000	       875 ns/op	      32 B/op	       1 allocs/op
+BenchmarkTunny-4       	 1000000	      4060 ns/op	      32 B/op	       2 allocs/op
 ```
+
+GrPool is a little faster than SlavePool. This is caused because GoSlaves resize the stack adapting it to work demand.
 
 Example
 -------
