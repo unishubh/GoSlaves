@@ -10,8 +10,7 @@ var (
 	pool        = &sync.Pool{
 		New: func() interface{} {
 			return &slave{
-				ch:        make(chan interface{}, 1),
-				lastUsage: time.Now(),
+				ch: make(chan interface{}, 1),
 			}
 		},
 	}
