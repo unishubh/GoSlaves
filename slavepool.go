@@ -7,6 +7,11 @@ import (
 
 var (
 	defaultTime = time.Second * 10
+	pool        = &sync.Pool{
+		New: func() interface{} {
+			return &slave{}
+		},
+	}
 )
 
 // This library follows the FILO scheme
@@ -45,7 +50,6 @@ func cleanSlaves(locker sync.RWMutex, slaves *[]*slave) {
 			// closing
 			tmp[i].ch <- nil
 		}
-		tmp = nil
 	}
 }
 
@@ -79,33 +83,37 @@ func (sp *SlavePool) Open() {
 			select {
 			case job = <-sp.ch:
 				sp.lock.Lock()
-				n = len(sp.ready) - 1
-				if n < 0 {
+				if n <= 0 {
 					n++
-					sv = &slave{
-						ch: make(chan interface{}, 1),
-					}
+					sv = pool.Get().(*slave)
+					sv.ch = make(chan interface{}, 1)
 					sp.ready = append(sp.ready, sv)
 					go func(s *slave) {
+						defer pool.Put(s)
 						var job interface{}
 						s.lastUsage = time.Now()
 						for job = range s.ch {
+							sp.lock.Lock()
+							n--
+							sp.lock.Unlock()
 							if job == nil {
 								s.close()
 								return
 							}
+
 							sp.Work(job)
-							s.lastUsage = time.Now()
 
 							sp.lock.Lock()
+							n++
+							s.lastUsage = time.Now()
 							sp.ready = append(sp.ready, s)
 							sp.lock.Unlock()
 						}
 					}(sv)
 				} else {
-					sv = sp.ready[n]
+					sv = sp.ready[n-1]
+					sp.ready = sp.ready[:n]
 				}
-				sp.ready = sp.ready[:n]
 				sp.lock.Unlock()
 				sv.ch <- job
 			case <-sp.stop:

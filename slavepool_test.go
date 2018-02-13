@@ -40,3 +40,30 @@ func TestServe_SlavePool(t *testing.T) {
 		t.Fatal("timeout")
 	}
 }
+
+func BenchmarkSlavePool(b *testing.B) {
+	ch := make(chan int, b.N)
+	done := make(chan struct{})
+
+	sp := &SlavePool{
+		Work: func(obj interface{}) {
+			ch <- obj.(int)
+		},
+	}
+	sp.Open()
+	defer sp.Close()
+
+	go func() {
+		for i := 0; i < b.N; i++ {
+			<-ch
+		}
+		done <- struct{}{}
+		close(ch)
+		close(done)
+	}()
+
+	for i := 0; i < b.N; i++ {
+		sp.Serve(i)
+	}
+	<-done
+}
