@@ -83,8 +83,8 @@ func (sp *SlavePool) Open() {
 			select {
 			case job = <-sp.ch:
 				sp.lock.Lock()
-				if n <= 0 {
-					n++
+				n = len(sp.ready) - 1
+				if n < 0 {
 					sv = pool.Get().(*slave)
 					sv.ch = make(chan interface{}, 1)
 					sp.ready = append(sp.ready, sv)
@@ -93,9 +93,6 @@ func (sp *SlavePool) Open() {
 						var job interface{}
 						s.lastUsage = time.Now()
 						for job = range s.ch {
-							sp.lock.Lock()
-							n--
-							sp.lock.Unlock()
 							if job == nil {
 								s.close()
 								return
@@ -103,15 +100,14 @@ func (sp *SlavePool) Open() {
 
 							sp.Work(job)
 
-							sp.lock.Lock()
-							n++
 							s.lastUsage = time.Now()
+							sp.lock.Lock()
 							sp.ready = append(sp.ready, s)
 							sp.lock.Unlock()
 						}
 					}(sv)
 				} else {
-					sv = sp.ready[n-1]
+					sv = sp.ready[n]
 					sp.ready = sp.ready[:n]
 				}
 				sp.lock.Unlock()
