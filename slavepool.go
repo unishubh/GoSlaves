@@ -82,8 +82,9 @@ func (sp *SlavePool) Open() {
 				n = len(sp.ready) - 1
 				if n < 0 {
 					n++
-					sv = &slave{}
-					sv.ch = make(chan interface{}, 1)
+					sv = &slave{
+						ch: make(chan interface{}, 1),
+					}
 					sp.ready = append(sp.ready, sv)
 					go func(s *slave) {
 						var job interface{}

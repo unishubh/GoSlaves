@@ -1,6 +1,6 @@
 # GoSlaves
 
-GoSlaves is a simple golang's library which can handle wide list of tasks asynchronously
+GoSlaves is a simple golang's library which can handle wide list of tasks asynchronously.
 
 [![GoDoc](https://godoc.org/github.com/themester/GoSlaves?status.svg)](https://godoc.org/github.com/themester/GoSlaves)
 [![Go Report Card](https://goreportcard.com/badge/github.com/themester/goslaves)](https://goreportcard.com/report/github.com/themester/goslaves)
@@ -10,52 +10,48 @@ GoSlaves is a simple golang's library which can handle wide list of tasks asynch
 Installation
 ------------
 
-Experimental version:
-```bash
-go get github.com/themester/GoSlaves
 ```
-
-Stable version:
-```bash
-go get gopkg.in/themester/GoSlaves.v2
-```
-
-First stable version:
-```bash
-go get gopkg.in/themester/GoSlaves.v1
+$ go get -u -v -x github.com/themester/GoSlaves
 ```
 
 Example
 -------
 ```go
-package main
-
-import (
-  "fmt"
-  "os"
-  "time"
-  "io/ioutil"
-  "github.com/themester/GoSlaves"
-)
-
 func main() {
+  ch := make(chan int, 20)
+  cs := make(chan struct{})
   sp := &slaves.SlavePool{
     Work: func(obj interface{}) {
-      fmt.Println(obj)
+      ch <- obj.(int)
     },
   }
   sp.Open()
-  defer func() {
-    time.Sleep(time.Second)
-    sp.Close()
+  defer sp.Close()
+
+  go func() {
+    p := 0
+    for range ch {
+      p++
+    }
+    if p == 20 {
+      cs <- struct{}{}
+    } else {
+      panic(
+        fmt.Sprintf("Bad test: %s", p),
+      )
+    }
   }()
 
-  files, err := ioutil.ReadDir(os.TempDir())
-  if err == nil {
-    fmt.Println("Files in temp directory:")
-    for i := range files {
-      sp.Serve(files[i].Name())
-    }
+  for i := 0; i < 20; i++ {
+    sp.Serve(i)
   }
-}
+  time.Sleep(time.Second)
+  close(ch)
+
+  select {
+  case <-cs:
+  case <-time.After(time.Second * 2):
+    t.Fatal("timeout")
+  }
+
 ```

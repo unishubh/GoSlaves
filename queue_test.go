@@ -1,42 +1,36 @@
 package slaves
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
 	"testing"
 	"time"
 )
 
 func TestServe_Queue(t *testing.T) {
+	ch := make(chan int, 10)
+	done := make(chan struct{})
 	queue := DoQueue(5, func(obj interface{}) {
-		fmt.Println(obj)
-		time.Sleep(time.Second * 2)
+		ch <- obj.(int)
+		time.Sleep(time.Second * 1)
 	})
 	defer queue.Close()
 
-	files, err := ioutil.ReadDir(os.TempDir())
-	if err == nil {
-		for i := range files {
-			queue.Serve(files[i].Name())
+	go func() {
+		for t := 0; t < 10; t++ {
+			<-ch
 		}
-	}
-	time.Sleep(time.Second)
-}
+		done <- struct{}{}
+	}()
 
-func TestStop_Queue(t *testing.T) {
-	queue := DoQueue(5, func(obj interface{}) {
-		fmt.Println(obj)
-	})
-	defer queue.Close()
-
-	for i := 0; i < 20; i++ {
-		if i == 5 {
-			queue.Stop()
-			time.Sleep(time.Second)
-		}
+	for i := 0; i < 10; i++ {
 		queue.Serve(i)
 	}
-	time.Sleep(time.Second * 2)
-	queue.Resume()
+
+	select {
+	case <-done:
+		close(ch)
+		close(done)
+		return
+	case <-time.After(time.Second * 3):
+		t.Fatal("timeout")
+	}
 }
