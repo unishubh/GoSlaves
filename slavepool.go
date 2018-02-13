@@ -9,7 +9,10 @@ var (
 	defaultTime = time.Second * 10
 	pool        = &sync.Pool{
 		New: func() interface{} {
-			return &slave{}
+			return &slave{
+				ch:        make(chan interface{}, 1),
+				lastUsage: time.Now(),
+			}
 		},
 	}
 )
@@ -18,13 +21,6 @@ var (
 type slave struct {
 	ch        chan interface{}
 	lastUsage time.Time
-}
-
-func (s *slave) close() {
-	if s.ch != nil {
-		close(s.ch)
-		s.ch = nil
-	}
 }
 
 func cleanSlaves(locker sync.RWMutex, slaves *[]*slave) {
@@ -47,7 +43,6 @@ func cleanSlaves(locker sync.RWMutex, slaves *[]*slave) {
 		*slaves = (*slaves)[:c]
 		locker.Unlock()
 		for i, l = 0, len(tmp); i < l; i++ {
-			// closing
 			tmp[i].ch <- nil
 		}
 	}
@@ -84,24 +79,20 @@ func (sp *SlavePool) Open() {
 			case job = <-sp.ch:
 				sp.lock.Lock()
 				n = len(sp.ready) - 1
-				if n < 0 {
+				if n == -1 {
 					sv = pool.Get().(*slave)
-					sv.ch = make(chan interface{}, 1)
-					sp.ready = append(sp.ready, sv)
 					go func(s *slave) {
-						defer pool.Put(s)
 						var job interface{}
-						s.lastUsage = time.Now()
 						for job = range s.ch {
 							if job == nil {
-								s.close()
+								pool.Put(s)
 								return
 							}
 
 							sp.Work(job)
 
-							s.lastUsage = time.Now()
 							sp.lock.Lock()
+							s.lastUsage = time.Now()
 							sp.ready = append(sp.ready, s)
 							sp.lock.Unlock()
 						}
@@ -131,15 +122,6 @@ func (sp *SlavePool) Close() {
 	sp.stop <- struct{}{}
 
 	sp.lock.Lock()
-	ready := sp.ready
 	sp.running = false
-
-	for _, sv := range ready {
-		if sv != nil {
-			sp.lock.Unlock()
-			sv.close()
-			sp.lock.Lock()
-		}
-	}
 	sp.lock.Unlock()
 }

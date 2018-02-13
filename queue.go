@@ -64,17 +64,14 @@ func DoQueue(max int, work func(obj interface{})) *Queue {
 					if atomic.LoadInt32(&queue.current) >= m {
 						queue.rcond.Wait()
 					} else {
-						s = &slave{
-							ch:        make(chan interface{}, 1),
-							lastUsage: time.Now(),
-						}
+						s = pool.Get().(*slave)
 						atomic.AddInt32(&queue.current, 1)
 						go func(sv *slave) {
 							defer atomic.AddInt32(&queue.current, -1)
+							defer pool.Put(sv)
 							var w interface{}
 							for w = range sv.ch {
 								if w == nil {
-									sv.close()
 									return
 								}
 								work(w)
@@ -137,7 +134,4 @@ func (queue *Queue) Close() {
 	queue.closed = true
 	queue.cond.Signal()
 	<-queue.ok
-	for _, s := range queue.slaves {
-		s.close()
-	}
 }
