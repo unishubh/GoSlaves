@@ -53,7 +53,9 @@ type SlavePool struct {
 	ready []*slave
 	stop  chan struct{}
 	// SlavePool work
-	Work    func(interface{})
+	Work func(interface{})
+	// Size is the size of the job receiver channel
+	Size    int
 	ch      chan interface{}
 	running bool
 }
@@ -63,8 +65,11 @@ func (sp *SlavePool) Open() {
 		panic("Pool is running already")
 	}
 
+	if sp.Size <= 0 {
+		sp.Size = 20
+	}
 	sp.running = true
-	sp.ch = make(chan interface{}, 1)
+	sp.ch = make(chan interface{}, sp.Size)
 	sp.stop = make(chan struct{}, 1)
 	sp.ready = make([]*slave, 0)
 

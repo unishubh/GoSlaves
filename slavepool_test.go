@@ -49,6 +49,7 @@ func BenchmarkSlavePool(b *testing.B) {
 		Work: func(obj interface{}) {
 			ch <- obj.(int)
 		},
+		Size: b.N,
 	}
 	sp.Open()
 	defer sp.Close()
