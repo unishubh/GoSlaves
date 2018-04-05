@@ -49,33 +49,18 @@ func NewPool(w func(interface{})) *SlavePool {
 }
 
 func (sp *SlavePool) Serve(job interface{}) {
-	sv := pool.Get().(*slave)
-	if sv.sp == nil {
-		sv.sp = sp
-		go sv.work()
-	}
-	select {
-	case sv.ch <- job:
-		pool.Put(sv)
-		return
-	default:
-		t := append([]*slave{}, sv)
-		for {
-			sv = &slave{
-				ch: make(chan interface{}, ChanSize),
-			}
+	for {
+		sv := pool.Get().(*slave)
+		if sv.sp == nil {
 			sv.sp = sp
 			go sv.work()
-			select {
-			case sv.ch <- job:
-				pool.Put(sv)
-				for i := range t {
-					pool.Put(t[i])
-				}
-				return
-			default:
-				t = append(t, sv)
-			}
+		}
+		select {
+		case sv.ch <- job:
+			pool.Put(sv)
+			return
+		default:
+			pool.Put(sv)
 		}
 	}
 }
