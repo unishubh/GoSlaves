@@ -28,8 +28,6 @@ BenchmarkTunny-2       	10000000	      2225 ns/op	      32 B/op	       2 allocs/
 BenchmarkSlavePool-2   	50000000	       333 ns/op	      16 B/op	       1 allocs/op
 ```
 
-GrPool is a little faster than SlavePool. This is caused because GoSlaves resize the stack adapting it to work demand.
-
 Example
 -------
 ```go
