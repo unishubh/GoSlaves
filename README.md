@@ -23,9 +23,9 @@ After a lot of benchmarks and the following enhancings of the package I got this
 $ go test -bench=. -benchmem -benchtime=10s
 goos: linux
 goarch: amd64
-BenchmarkGrPool-2      	10000000	      1183 ns/op	      40 B/op	       1 allocs/op
-BenchmarkTunny-2       	10000000	      2538 ns/op	      32 B/op	       2 allocs/op
-BenchmarkSlavePool-2   	20000000	      1107 ns/op	      16 B/op	       1 allocs/op
+BenchmarkGrPool-2      	20000000	      1156 ns/op	      40 B/op	       1 allocs/op
+BenchmarkTunny-2       	10000000	      2225 ns/op	      32 B/op	       2 allocs/op
+BenchmarkSlavePool-2   	50000000	       333 ns/op	      16 B/op	       1 allocs/op
 ```
 
 GrPool is a little faster than SlavePool. This is caused because GoSlaves resize the stack adapting it to work demand.

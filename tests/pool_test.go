@@ -17,12 +17,14 @@ func BenchmarkGrPool(b *testing.B) {
 	defer pool.Release()
 
 	go func() {
-		for i := 0; i < b.N; i++ {
-			<-ch
+		var i = 0
+		for i < b.N {
+			select {
+			case <-ch:
+				i++
+			}
 		}
 		done <- struct{}{}
-		close(ch)
-		close(done)
 	}()
 
 	for i := 0; i < b.N; i++ {
@@ -31,6 +33,8 @@ func BenchmarkGrPool(b *testing.B) {
 		}
 	}
 	<-done
+	close(ch)
+	close(done)
 }
 
 func BenchmarkTunny(b *testing.B) {
@@ -39,12 +43,14 @@ func BenchmarkTunny(b *testing.B) {
 	numCPUs := runtime.NumCPU()
 
 	go func() {
-		for i := 0; i < b.N; i++ {
-			<-ch
+		var i = 0
+		for i < b.N {
+			select {
+			case <-ch:
+				i++
+			}
 		}
 		done <- struct{}{}
-		close(ch)
-		close(done)
 	}()
 
 	pool := tunny.NewFunc(numCPUs, func(payload interface{}) interface{} {
@@ -58,6 +64,8 @@ func BenchmarkTunny(b *testing.B) {
 	}
 
 	<-done
+	close(ch)
+	close(done)
 }
 
 func BenchmarkSlavePool(b *testing.B) {
@@ -73,16 +81,20 @@ func BenchmarkSlavePool(b *testing.B) {
 	defer sp.Close()
 
 	go func() {
-		for i := 0; i < b.N; i++ {
-			<-ch
+		var i = 0
+		for i < b.N {
+			select {
+			case <-ch:
+				i++
+			}
 		}
 		done <- struct{}{}
-		close(ch)
-		close(done)
 	}()
 
 	for i := 0; i < b.N; i++ {
 		sp.Serve(i)
 	}
 	<-done
+	close(ch)
+	close(done)
 }
