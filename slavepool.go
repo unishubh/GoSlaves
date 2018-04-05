@@ -5,6 +5,7 @@ import (
 )
 
 var (
+	// ChanSize is used in slave channel buffer size
 	ChanSize = 20
 	pool     = &sync.Pool{
 		New: func() interface{} {
@@ -28,43 +29,53 @@ func (s *slave) work() {
 			return
 		}
 
-		s.sp.Work(job)
+		s.sp.work(job)
 	}
 }
 
+// SlavePool
 type SlavePool struct {
-	// SlavePool work
-	Work func(interface{})
-
-	running bool
+	work func(interface{})
 }
 
-func (sp *SlavePool) Open() {
-	if sp.running {
-		panic("Pool is running already")
+// NewPool creates SlavePool.
+//
+// returns nil if w is nil
+func NewPool(w func(interface{})) *SlavePool {
+	if w == nil {
+		return nil
 	}
-
-	sp.running = true
+	return &SlavePool{work: w}
 }
 
 func (sp *SlavePool) Serve(job interface{}) {
-	if sp.running {
+	sv := pool.Get().(*slave)
+	if sv.sp == nil {
+		sv.sp = sp
+		go sv.work()
+	}
+	select {
+	case sv.ch <- job:
+		pool.Put(sv)
+		return
+	default:
+		t := append([]*slave{}, sv)
 		for {
-			sv := pool.Get().(*slave)
-			if sv.sp == nil {
-				sv.sp = sp
-				go sv.work()
+			sv = &slave{
+				ch: make(chan interface{}, ChanSize),
 			}
+			sv.sp = sp
+			go sv.work()
 			select {
 			case sv.ch <- job:
 				pool.Put(sv)
+				for i := range t {
+					pool.Put(t[i])
+				}
 				return
+			default:
+				t = append(t, sv)
 			}
-			pool.Put(sv)
 		}
 	}
-}
-
-func (sp *SlavePool) Close() {
-	sp.running = false
 }

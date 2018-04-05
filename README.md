@@ -34,13 +34,9 @@ Example
 func main() {
   ch := make(chan int, 20)
   cs := make(chan struct{})
-  sp := &slaves.SlavePool{
-    Work: func(obj interface{}) {
-      ch <- obj.(int)
-    },
-  }
-  sp.Open()
-  defer sp.Close()
+  sp := NewPool(func(obj interface{}) {
+    ch <- obj.(int)
+  })
 
   go func() {
     p := 0
@@ -50,9 +46,7 @@ func main() {
     if p == 20 {
       cs <- struct{}{}
     } else {
-      panic(
-        fmt.Sprintf("Bad test: %s", p),
-      )
+      t.Fatal("Bad test: ", p)
     }
   }()
 
@@ -67,5 +61,5 @@ func main() {
   case <-time.After(time.Second * 2):
     t.Fatal("timeout")
   }
-
+}
 ```
