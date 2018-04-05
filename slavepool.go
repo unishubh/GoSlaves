@@ -48,6 +48,7 @@ func NewPool(w func(interface{})) *SlavePool {
 	return &SlavePool{work: w}
 }
 
+// Serve executes job in w func
 func (sp *SlavePool) Serve(job interface{}) {
 	for {
 		sv := pool.Get().(*slave)
