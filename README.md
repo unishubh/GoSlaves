@@ -31,35 +31,31 @@ BenchmarkSlavePool-2   	50000000	       333 ns/op	      16 B/op	       1 allocs/
 Example
 -------
 ```go
+package main
+
+import (
+  "github.com/themester/GoSlaves"
+)
+
 func main() {
   ch := make(chan int, 20)
-  cs := make(chan struct{})
-  sp := NewPool(func(obj interface{}) {
-    ch <- obj.(int)
+  pool := slaves.NewPool(func(o interface{}) {
+    ch <- o.(int)
   })
 
   go func() {
-    p := 0
-    for range ch {
-      p++
-    }
-    if p == 20 {
-      cs <- struct{}{}
-    } else {
-      t.Fatal("Bad test: ", p)
+    for i := 0; i < 10000; i++ {
+      pool.Serve(i)
     }
   }()
 
-  for i := 0; i < 20; i++ {
-    sp.Serve(i)
+  i := 0
+  for i < 10000 {
+    select {
+    case <-ch:
+      i++
+    }
   }
-  time.Sleep(time.Second)
   close(ch)
-
-  select {
-  case <-cs:
-  case <-time.After(time.Second * 2):
-    t.Fatal("timeout")
-  }
 }
 ```
