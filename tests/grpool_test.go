@@ -3,16 +3,15 @@ package slaves
 import (
 	"testing"
 
-	"github.com/themester/GoSlaves"
+	"github.com/ivpusic/grpool"
 )
 
-func BenchmarkSlavePool(b *testing.B) {
+func BenchmarkGrPool(b *testing.B) {
 	ch := make(chan int, b.N)
 	done := make(chan struct{})
 
-	sp := slaves.NewPool(func(obj interface{}) {
-		ch <- obj.(int)
-	})
+	pool := grpool.NewPool(50, 50)
+	defer pool.Release()
 
 	go func() {
 		var i = 0
@@ -26,7 +25,9 @@ func BenchmarkSlavePool(b *testing.B) {
 	}()
 
 	for i := 0; i < b.N; i++ {
-		sp.Serve(i)
+		pool.JobQueue <- func() {
+			ch <- i
+		}
 	}
 	<-done
 	close(ch)

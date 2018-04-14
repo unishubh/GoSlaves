@@ -1,18 +1,16 @@
 package slaves
 
 import (
+	"runtime"
 	"testing"
 
-	"github.com/themester/GoSlaves"
+	"github.com/Jeffail/tunny"
 )
 
-func BenchmarkSlavePool(b *testing.B) {
+func BenchmarkTunny(b *testing.B) {
 	ch := make(chan int, b.N)
 	done := make(chan struct{})
-
-	sp := slaves.NewPool(func(obj interface{}) {
-		ch <- obj.(int)
-	})
+	numCPUs := runtime.NumCPU()
 
 	go func() {
 		var i = 0
@@ -25,9 +23,16 @@ func BenchmarkSlavePool(b *testing.B) {
 		done <- struct{}{}
 	}()
 
+	pool := tunny.NewFunc(numCPUs, func(payload interface{}) interface{} {
+		ch <- payload.(int)
+		return nil
+	})
+	defer pool.Close()
+
 	for i := 0; i < b.N; i++ {
-		sp.Serve(i)
+		pool.Process(i)
 	}
+
 	<-done
 	close(ch)
 	close(done)
