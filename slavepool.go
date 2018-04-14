@@ -25,10 +25,6 @@ type slave struct {
 func (s *slave) work() {
 	var job interface{}
 	for job = range s.ch {
-		if job == nil {
-			return
-		}
-
 		s.sp.work(job)
 	}
 }
