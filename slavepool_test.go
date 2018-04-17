@@ -2,38 +2,28 @@ package slaves
 
 import (
 	"testing"
-	"time"
 )
 
 func TestServe_SlavePool(t *testing.T) {
 	ch := make(chan int, 20)
-	cs := make(chan struct{})
 	sp := NewPool(func(obj interface{}) {
 		ch <- obj.(int)
 	})
 
+	rounds := 100000
+
 	go func() {
-		p := 0
-		for range ch {
-			p++
-		}
-		if p == 20 {
-			cs <- struct{}{}
-		} else {
-			t.Fatal("Bad test: ", p)
+		for i := 0; i < rounds; i++ {
+			sp.Serve(i)
 		}
 	}()
 
-	for i := 0; i < 20; i++ {
-		sp.Serve(i)
-	}
-	time.Sleep(time.Second)
-	close(ch)
-
-	select {
-	case <-cs:
-	case <-time.After(time.Second * 2):
-		t.Fatal("timeout")
+	i := 0
+	for i < rounds {
+		select {
+		case <-ch:
+			i++
+		}
 	}
 }
 
