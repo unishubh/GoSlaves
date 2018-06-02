@@ -14,7 +14,7 @@ func TestServe_SlavePool(t *testing.T) {
 
 	go func() {
 		for i := 0; i < rounds; i++ {
-			sp.W <- i
+			sp.Serve(i)
 		}
 	}()
 
@@ -37,7 +37,7 @@ func BenchmarkSlavePool(b *testing.B) {
 
 	go func() {
 		for i := 0; i < b.N; i++ {
-			sp.W <- i
+			sp.Serve(i)
 		}
 	}()
 

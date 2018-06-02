@@ -15,7 +15,7 @@ func BenchmarkSlavePool(b *testing.B) {
 
 	go func() {
 		for i := 0; i < b.N; i++ {
-			sp.W <- i
+			sp.Serve(i)
 		}
 	}()
 
