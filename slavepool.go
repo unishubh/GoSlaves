@@ -10,7 +10,7 @@ var (
 	ChanSize = 20
 )
 
-// This library follows the FILO scheme
+// This library follows the FIFO scheme
 type slave struct {
 	ch chan interface{}
 }
@@ -52,11 +52,11 @@ func NewPool(w func(interface{})) *SlavePool {
 	sp := &SlavePool{
 		i:  1,
 		n:  n,
-		sv: make([]*slave, 0, n),
+		sv: make([]*slave, n, n),
 	}
 
 	for i := 0; i < n; i++ {
-		sp.sv = append(sp.sv, newSlave(w))
+		sp.sv[i] = newSlave(w)
 	}
 
 	return sp
