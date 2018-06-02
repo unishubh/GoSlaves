@@ -20,13 +20,21 @@ Benchmark
 After a lot of benchmarks and the following enhancings of the package I got this results:
 
 ```
-$ go test -bench=. -benchmem -benchtime=10s
+$ GOMAXPROCS=4 go test -bench=. -benchmem -benchtime=10s
 goos: linux
 goarch: amd64
 BenchmarkGrPool-4      	20000000	       717 ns/op	      40 B/op	       1 allocs/op
 BenchmarkSlavePool-4   	50000000	       367 ns/op	      16 B/op	       1 allocs/op
 BenchmarkTunny-4       	 3000000	      4131 ns/op	      32 B/op	       2 allocs/op
+```
 
+```
+$ GOMAXPROCS=2 go test -bench=. -benchmem -benchtime=10s
+goos: linux
+goarch: amd64
+BenchmarkGrPool-2      	20000000	       740 ns/op	      40 B/op	       1 allocs/op
+BenchmarkSlavePool-2   	50000000	       353 ns/op	      16 B/op	       1 allocs/op
+BenchmarkTunny-2       	 5000000	      3370 ns/op	      32 B/op	       2 allocs/op
 ```
 
 Optimizations
