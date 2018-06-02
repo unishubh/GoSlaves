@@ -2,6 +2,7 @@ package slaves
 
 import (
 	"runtime"
+	"sync"
 )
 
 var (
@@ -33,10 +34,10 @@ func (s *slave) close() {
 
 // SlavePool
 type SlavePool struct {
-	sv []*slave
+	sv   []*slave
+	i, n int
 
-	// W is working channel
-	W chan interface{}
+	locker sync.Mutex
 }
 
 // NewPool creates SlavePool.
@@ -49,7 +50,8 @@ func NewPool(w func(interface{})) *SlavePool {
 	n := runtime.GOMAXPROCS(0)
 
 	sp := &SlavePool{
-		W:  make(chan interface{}, ChanSize*n),
+		i:  1,
+		n:  n,
 		sv: make([]*slave, 0, n),
 	}
 
@@ -57,26 +59,25 @@ func NewPool(w func(interface{})) *SlavePool {
 		sp.sv = append(sp.sv, newSlave(w))
 	}
 
-	go func() {
-		var s *slave
-		i := 1
-		for w := range sp.W {
-			if i == n {
-				i = 1
-			}
-			s = sp.sv[0]
-			sp.sv[0], sp.sv[i] = sp.sv[i], sp.sv[0]
-			s.ch <- w
-			i++
-		}
-	}()
-
 	return sp
 }
 
-func (s *SlavePool) Close() {
-	n := len(s.sv)
-	for i := 0; i < n; i++ {
-		s.sv[i].close()
+// Serve sends work to goroutine pool
+func (sp *SlavePool) Serve(w interface{}) {
+	sp.locker.Lock()
+	s := sp.sv[0]
+	sp.sv[0], sp.sv[sp.i] = sp.sv[sp.i], sp.sv[0]
+	sp.i++
+	if sp.i == sp.n {
+		sp.i = 1
+	}
+	sp.locker.Unlock()
+	s.ch <- w
+}
+
+// Close closes the SlavePool
+func (sp *SlavePool) Close() {
+	for i := 0; i < sp.n; i++ {
+		sp.sv[i].close()
 	}
 }
