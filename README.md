@@ -23,9 +23,9 @@ After a lot of benchmarks and the following enhancings of the package I got this
 $ go test -bench=. -benchmem -benchtime=10s
 goos: linux
 goarch: amd64
-BenchmarkGrPool-2      	20000000	      1156 ns/op	      40 B/op	       1 allocs/op
-BenchmarkTunny-2       	10000000	      2225 ns/op	      32 B/op	       2 allocs/op
-BenchmarkSlavePool-2   	50000000	       333 ns/op	      16 B/op	       1 allocs/op
+BenchmarkGrPool-4      	20000000	       719 ns/op	      40 B/op	       1 allocs/op
+BenchmarkSlavePool-4   	30000000	       456 ns/op	      16 B/op	       1 allocs/op
+BenchmarkTunny-4       	 3000000	      4153 ns/op	      32 B/op	       2 allocs/op
 ```
 
 Example
@@ -44,18 +44,18 @@ func main() {
   })
 
   go func() {
-    for i := 0; i < 10000; i++ {
-      pool.Serve(i)
+    for i := 0; i < 100000; i++ {
+      pool.W <- i
     }
   }()
 
   i := 0
-  for i < 10000 {
+  for i < 100000 {
     select {
     case <-ch:
       i++
     }
   }
-  close(ch)
+  pool.Close()
 }
 ```
