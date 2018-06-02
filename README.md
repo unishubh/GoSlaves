@@ -74,7 +74,7 @@ func main() {
 
   go func() {
     for i := 0; i < 100000; i++ {
-      pool.W <- i
+      pool.Serve(i)
     }
   }()
 
