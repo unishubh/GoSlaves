@@ -23,9 +23,10 @@ After a lot of benchmarks and the following enhancings of the package I got this
 $ go test -bench=. -benchmem -benchtime=10s
 goos: linux
 goarch: amd64
-BenchmarkGrPool-4      	20000000	       719 ns/op	      40 B/op	       1 allocs/op
-BenchmarkSlavePool-4   	30000000	       456 ns/op	      16 B/op	       1 allocs/op
-BenchmarkTunny-4       	 3000000	      4153 ns/op	      32 B/op	       2 allocs/op
+BenchmarkGrPool-4      	20000000	       717 ns/op	      40 B/op	       1 allocs/op
+BenchmarkSlavePool-4   	50000000	       367 ns/op	      16 B/op	       1 allocs/op
+BenchmarkTunny-4       	 3000000	      4131 ns/op	      32 B/op	       2 allocs/op
+
 ```
 
 Example
