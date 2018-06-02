@@ -1,37 +1,42 @@
 package slaves
 
 import (
-	"sync"
+	"runtime"
 )
 
 var (
 	// ChanSize is used in slave channel buffer size
 	ChanSize = 20
-	pool     = &sync.Pool{
-		New: func() interface{} {
-			return &slave{
-				ch: make(chan interface{}, ChanSize),
-			}
-		},
-	}
 )
 
 // This library follows the FILO scheme
 type slave struct {
 	ch chan interface{}
-	sp *SlavePool
 }
 
-func (s *slave) work() {
-	var job interface{}
-	for job = range s.ch {
-		s.sp.work(job)
+func newSlave(w func(interface{})) *slave {
+	s := &slave{
+		ch: make(chan interface{}, ChanSize),
 	}
+	go func() {
+		var job interface{}
+		for job = range s.ch {
+			w(job)
+		}
+	}()
+	return s
+}
+
+func (s *slave) close() {
+	close(s.ch)
 }
 
 // SlavePool
 type SlavePool struct {
-	work func(interface{})
+	sv []*slave
+
+	// W is working channel
+	W chan interface{}
 }
 
 // NewPool creates SlavePool.
@@ -41,23 +46,37 @@ func NewPool(w func(interface{})) *SlavePool {
 	if w == nil {
 		return nil
 	}
-	return &SlavePool{work: w}
+	n := runtime.GOMAXPROCS(0)
+
+	sp := &SlavePool{
+		W:  make(chan interface{}, ChanSize*n),
+		sv: make([]*slave, 0, n),
+	}
+
+	for i := 0; i < n; i++ {
+		sp.sv = append(sp.sv, newSlave(w))
+	}
+
+	go func() {
+		var s *slave
+		i := 1
+		for w := range sp.W {
+			if i == n {
+				i = 1
+			}
+			s = sp.sv[0]
+			sp.sv[0], sp.sv[i] = sp.sv[i], sp.sv[0]
+			s.ch <- w
+			i++
+		}
+	}()
+
+	return sp
 }
 
-// Serve executes job in w func
-func (sp *SlavePool) Serve(job interface{}) {
-	for {
-		sv := pool.Get().(*slave)
-		if sv.sp == nil {
-			sv.sp = sp
-			go sv.work()
-		}
-		select {
-		case sv.ch <- job:
-			pool.Put(sv)
-			return
-		default:
-			pool.Put(sv)
-		}
+func (s *SlavePool) Close() {
+	n := len(s.sv)
+	for i := 0; i < n; i++ {
+		s.sv[i].close()
 	}
 }
