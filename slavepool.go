@@ -2,7 +2,6 @@ package slaves
 
 import (
 	"runtime"
-	"sync"
 )
 
 var (
@@ -10,7 +9,7 @@ var (
 	ChanSize = 20
 )
 
-// This library follows the FIFO scheme
+// This library uses a queue system. See Serve function.
 type slave struct {
 	ch chan interface{}
 }
@@ -34,10 +33,8 @@ func (s *slave) close() {
 
 // SlavePool
 type SlavePool struct {
-	sv   []*slave
-	i, n int
-
-	locker sync.Mutex
+	sv []*slave
+	n  int
 }
 
 // NewPool creates SlavePool.
@@ -50,7 +47,6 @@ func NewPool(w func(interface{})) *SlavePool {
 	n := runtime.GOMAXPROCS(0)
 
 	sp := &SlavePool{
-		i:  1,
 		n:  n,
 		sv: make([]*slave, n, n),
 	}
@@ -64,15 +60,18 @@ func NewPool(w func(interface{})) *SlavePool {
 
 // Serve sends work to goroutine pool
 func (sp *SlavePool) Serve(w interface{}) {
-	sp.locker.Lock()
-	s := sp.sv[0]
-	sp.sv[0], sp.sv[sp.i] = sp.sv[sp.i], sp.sv[0]
-	sp.i++
-	if sp.i == sp.n {
-		sp.i = 1
+	i := 0
+	for {
+		select {
+		case sp.sv[i].ch <- w:
+			return
+		default: // channel is busy
+			i++
+			if i == sp.n {
+				i = 0
+			}
+		}
 	}
-	sp.locker.Unlock()
-	s.ch <- w
 }
 
 // Close closes the SlavePool
