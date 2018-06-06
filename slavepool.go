@@ -59,6 +59,8 @@ func NewPool(w func(interface{})) *SlavePool {
 }
 
 // Serve sends work to goroutine pool
+//
+// If all slaves are busy this function will stop until any of this ends a task.
 func (sp *SlavePool) Serve(w interface{}) {
 	i := 0
 	for {
