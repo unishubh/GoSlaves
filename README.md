@@ -23,38 +23,18 @@ After a lot of benchmarks and the following enhancings of the package I got this
 $ GOMAXPROCS=4 go test -bench=. -benchmem -benchtime=10s
 goos: linux
 goarch: amd64
-BenchmarkGrPool-4      	20000000	       717 ns/op	      40 B/op	       1 allocs/op
-BenchmarkSlavePool-4   	50000000	       367 ns/op	      16 B/op	       1 allocs/op
-BenchmarkTunny-4       	 3000000	      4131 ns/op	      32 B/op	       2 allocs/op
+BenchmarkGrPool-4      	10000000	       738 ns/op	      40 B/op	       1 allocs/op
+BenchmarkSlavePool-4   	20000000	       353 ns/op	      16 B/op	       1 allocs/op
+BenchmarkTunny-4       	 2000000	      4190 ns/op	      32 B/op	       2 allocs/op
 ```
 
 ```
 $ GOMAXPROCS=2 go test -bench=. -benchmem -benchtime=10s
 goos: linux
 goarch: amd64
-BenchmarkGrPool-2      	20000000	       740 ns/op	      40 B/op	       1 allocs/op
-BenchmarkSlavePool-2   	50000000	       353 ns/op	      16 B/op	       1 allocs/op
-BenchmarkTunny-2       	 5000000	      3370 ns/op	      32 B/op	       2 allocs/op
-```
-
-Optimizations
--------------
-
-You can optimize this package changing ChanSize variable and GOMAXPROCS env var. Here is a lot of benchmarks using different sizes:
-
-- ChanSize 100 and GOMAXPROCS 4:
-```
-BenchmarkSlavePool-4   	50000000	       263 ns/op	      16 B/op	       1 allocs/op
-```
-
-- ChanSize 1000 and GOMAXPROCS 4:
-```
-BenchmarkSlavePool-4   	100000000	       190 ns/op	      16 B/op	       1 allocs/op
-```
-
-- ChanSize 10000 and GOMAXPROCS 4:
-```
-BenchmarkSlavePool-4   	100000000	       192 ns/op	      16 B/op	       1 allocs/op
+BenchmarkGrPool-2      	20000000	       717 ns/op	      40 B/op	       1 allocs/op
+BenchmarkSlavePool-2   	100000000	       212 ns/op	      16 B/op	       1 allocs/op
+BenchmarkTunny-2       	 5000000	      3142 ns/op	      32 B/op	       2 allocs/op
 ```
 
 Example
@@ -63,28 +43,30 @@ Example
 package main
 
 import (
+  "fmt"
+  "net"
+
   "github.com/themester/GoSlaves"
 )
 
 func main() {
-  ch := make(chan int, 20)
-  pool := slaves.NewPool(func(o interface{}) {
-    ch <- o.(int)
+  pool := slaves.NewPool(func(obj interface{}) {
+    conn := obj.(net.Conn)
+    fmt.Fprintf(conn, "Welcome to GoSlaves!\n")
+    conn.Close()
   })
 
-  go func() {
-    for i := 0; i < 100000; i++ {
-      pool.Serve(i)
-    }
-  }()
-
-  i := 0
-  for i < 100000 {
-    select {
-    case <-ch:
-      i++
-    }
+  ln, err := net.Listen("tcp4", ":8080")
+  if err != nil {
+    panic(err)
   }
-  pool.Close()
+
+  for {
+    conn, err := ln.Accept()
+    if err != nil {
+      break
+    }
+    pool.Serve(conn)
+  }
 }
 ```
