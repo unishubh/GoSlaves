@@ -4,11 +4,6 @@ import (
 	"runtime"
 )
 
-var (
-	// ChanSize is used in slave channel buffer size
-	ChanSize = 20
-)
-
 // This library uses a queue system. See Serve function.
 type slave struct {
 	ch chan interface{}
@@ -16,7 +11,7 @@ type slave struct {
 
 func newSlave(w func(interface{})) *slave {
 	s := &slave{
-		ch: make(chan interface{}, ChanSize),
+		ch: make(chan interface{}, 1),
 	}
 	go func() {
 		var job interface{}
