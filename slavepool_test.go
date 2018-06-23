@@ -1,7 +1,6 @@
 package slaves
 
 import (
-	"runtime"
 	"testing"
 )
 
@@ -32,7 +31,6 @@ func TestServe_SlavePool(t *testing.T) {
 func BenchmarkSlavePool(b *testing.B) {
 	ch := make(chan int, b.N)
 
-	ChanSize = b.N / runtime.GOMAXPROCS(0)
 	sp := NewPool(func(obj interface{}) {
 		ch <- obj.(int)
 	})
