@@ -3,19 +3,19 @@ package slaves
 import (
 	"testing"
 
-	"github.com/themester/GoSlaves"
+	"github.com/gammazero/workerpool"
 )
 
-func BenchmarkSlavePool(b *testing.B) {
+func BenchmarkWorkerpool(b *testing.B) {
 	ch := make(chan int, b.N)
 
-	sp := slaves.NewPool(0, func(obj interface{}) {
-		ch <- obj.(int)
-	})
+	wp := workerpool.New(2)
 
 	go func() {
 		for i := 0; i < b.N; i++ {
-			sp.Serve(i)
+			wp.Submit(func() {
+				ch <- i
+			})
 		}
 	}()
 
@@ -28,5 +28,5 @@ func BenchmarkSlavePool(b *testing.B) {
 	}
 
 	close(ch)
-	sp.Close()
+	wp.Stop()
 }
