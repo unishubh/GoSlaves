@@ -34,12 +34,20 @@ type SlavePool struct {
 
 // NewPool creates SlavePool.
 //
+// if workers is 0 default workers will be created
+// use workers var if you know what you are doing
+//
 // returns nil if w is nil
-func NewPool(w func(interface{})) *SlavePool {
+func NewPool(workers int, w func(interface{})) *SlavePool {
 	if w == nil {
 		return nil
 	}
-	n := runtime.GOMAXPROCS(0)
+	var n int
+	if workers <= 0 {
+		n = runtime.GOMAXPROCS(0)
+	} else {
+		n = workers
+	}
 
 	sp := &SlavePool{
 		n:  n,
