@@ -17,15 +17,19 @@ $ go get -u -v -x github.com/themester/GoSlaves
 Benchmark
 ---------
 
+Note that all of this benchmarks have been implemented as his owners recommends.
+More of this goroutine pools works with more than 4 goroutines.
+
 After a lot of benchmarks and the following enhancings of the package I got this results:
 
 ```
-$ GOMAXPROCS=4 go test -bench=. -benchmem -benchtime=10s
+$ GOMAXPROCS=4 go test -v -bench=. -benchtime=5s -benchmem
 goos: linux
 goarch: amd64
-BenchmarkGrPool-4      	10000000	       738 ns/op	      40 B/op	       1 allocs/op
-BenchmarkSlavePool-4   	20000000	       353 ns/op	      16 B/op	       1 allocs/op
-BenchmarkTunny-4       	 2000000	      4190 ns/op	      32 B/op	       2 allocs/op
+BenchmarkGrPool-4       	10000000	       715 ns/op	      40 B/op	       1 allocs/op
+BenchmarkSlavePool-4    	20000000	       358 ns/op	      16 B/op	       1 allocs/op
+BenchmarkTunny-4        	 2000000	      4165 ns/op	      32 B/op	       2 allocs/op
+BenchmarkWorkerpool-4   	 3000000	      3023 ns/op	      40 B/op	       1 allocs/op
 ```
 
 ```
@@ -36,6 +40,13 @@ BenchmarkGrPool-2      	20000000	       717 ns/op	      40 B/op	       1 allocs/
 BenchmarkSlavePool-2   	100000000	       212 ns/op	      16 B/op	       1 allocs/op
 BenchmarkTunny-2       	 5000000	      3142 ns/op	      32 B/op	       2 allocs/op
 ```
+
+Library | Goroutines | Channel buffer
+--- | --- | ---
+GoSlaves | 4 | 1
+GrPool | 50 | 50
+Tunny | 4 | 1
+Workerpool | 4 | 1
 
 Example
 -------
