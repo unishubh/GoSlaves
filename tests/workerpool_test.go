@@ -9,7 +9,7 @@ import (
 func BenchmarkWorkerpool(b *testing.B) {
 	ch := make(chan int, b.N)
 
-	wp := workerpool.New(2)
+	wp := workerpool.New(4)
 
 	go func() {
 		for i := 0; i < b.N; i++ {

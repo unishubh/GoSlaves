@@ -9,10 +9,8 @@ type slave struct {
 	ch chan interface{}
 }
 
-func newSlave(w func(interface{})) *slave {
-	s := &slave{
-		ch: make(chan interface{}, 1),
-	}
+func newSlave(w func(interface{})) (s slave) {
+	s.ch = make(chan interface{}, 1)
 	go func() {
 		var job interface{}
 		for job = range s.ch {
@@ -28,7 +26,7 @@ func (s *slave) close() {
 
 // SlavePool
 type SlavePool struct {
-	sv []*slave
+	sv []slave
 	n  int
 }
 
@@ -36,29 +34,20 @@ type SlavePool struct {
 //
 // if workers is 0 default workers will be created
 // use workers var if you know what you are doing
-//
-// returns nil if w is nil
-func NewPool(workers int, w func(interface{})) *SlavePool {
+func NewPool(workers int, w func(interface{})) (sp SlavePool) {
 	if w == nil {
-		return nil
+		return
 	}
-	var n int
 	if workers <= 0 {
-		n = runtime.GOMAXPROCS(0)
-	} else {
-		n = workers
+		workers = runtime.GOMAXPROCS(0)
 	}
 
-	sp := &SlavePool{
-		n:  n,
-		sv: make([]*slave, n, n),
-	}
-
-	for i := 0; i < n; i++ {
+	sp.n = workers
+	sp.sv = make([]slave, sp.n, sp.n)
+	for i := 0; i < sp.n; i++ {
 		sp.sv[i] = newSlave(w)
 	}
-
-	return sp
+	return
 }
 
 // Serve sends work to goroutine pool
