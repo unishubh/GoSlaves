@@ -1,6 +1,7 @@
 package slaves
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -15,8 +16,14 @@ func executeServe(sp *SlavePool, rounds int) {
 func TestServe_SlavePool(t *testing.T) {
 	ch := make(chan int, 1)
 	counter := uint32(0)
+	locker := sync.Mutex{}
 	sp := NewPool(0, func(obj interface{}) {
-		atomic.AddUint32(&counter, 1)
+		locker.Lock()
+		c := counter + 1
+		if t := atomic.AddUint32(&counter, 1); t != c {
+			panic(fmt.Sprintf("%d<>%d does not match", t, c))
+		}
+		locker.Unlock()
 		ch <- obj.(int)
 	})
 
@@ -40,11 +47,14 @@ func TestServe_SlavePool(t *testing.T) {
 func TestServeMassiveServe_SlavePool(t *testing.T) {
 	ch := make(chan struct{}, 1)
 
+	counter := uint32(0)
 	locker := sync.Mutex{}
-	counter := 0
 	sp := NewPool(0, func(obj interface{}) {
 		locker.Lock()
-		counter++
+		c := counter + 1
+		if t := atomic.AddUint32(&counter, 1); t != c {
+			panic(fmt.Sprintf("%d<>%d does not match", t, c))
+		}
 		locker.Unlock()
 		ch <- struct{}{}
 	})
