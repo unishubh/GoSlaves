@@ -1,10 +1,16 @@
 package slaves
 
 import (
+	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
+
+func executeServe(sp *SlavePool, rounds int) {
+	for i := 0; i < rounds; i++ {
+		sp.Serve(i)
+	}
+}
 
 func TestServe_SlavePool(t *testing.T) {
 	ch := make(chan int, 1)
@@ -16,11 +22,7 @@ func TestServe_SlavePool(t *testing.T) {
 
 	rounds := 100000
 
-	go func() {
-		for i := 0; i < rounds; i++ {
-			sp.Serve(i)
-		}
-	}()
+	go executeServe(&sp, rounds)
 
 	i := 0
 	for i < rounds {
@@ -35,23 +37,24 @@ func TestServe_SlavePool(t *testing.T) {
 	sp.Close()
 }
 
-func TestServeTimeout_SlavePool(t *testing.T) {
-	ch := make(chan int, 1)
+func TestServeMassiveServe_SlavePool(t *testing.T) {
+	ch := make(chan struct{}, 1)
 
-	counter := uint32(0)
+	locker := sync.Mutex{}
+	counter := 0
 	sp := NewPool(0, func(obj interface{}) {
-		atomic.AddUint32(&counter, 1)
-		time.Sleep(time.Second)
-		ch <- obj.(int)
+		locker.Lock()
+		counter++
+		locker.Unlock()
+		ch <- struct{}{}
 	})
 
-	rounds := 10
+	rounds := 100000
 
-	go func() {
-		for i := 0; i < rounds; i++ {
-			sp.Serve(i)
-		}
-	}()
+	go executeServe(&sp, rounds/4)
+	go executeServe(&sp, rounds/4)
+	go executeServe(&sp, rounds/4)
+	go executeServe(&sp, rounds/4)
 
 	i := 0
 	for i < rounds {
@@ -73,11 +76,7 @@ func BenchmarkSlavePool(b *testing.B) {
 		ch <- obj.(int)
 	})
 
-	go func() {
-		for i := 0; i < b.N; i++ {
-			sp.Serve(i)
-		}
-	}()
+	go executeServe(&sp, b.N)
 
 	i := 0
 	for i < b.N {
