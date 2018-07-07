@@ -5,11 +5,27 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func executeServe(sp *SlavePool, rounds int) {
 	for i := 0; i < rounds; i++ {
 		sp.Serve(i)
+	}
+}
+
+func TestServeNonStop_SlavePool(t *testing.T) {
+	sp := NewPool(2, func(_ interface{}) {
+		time.Sleep(time.Second)
+	})
+	if sp.ServeNonStop(nil) == false {
+		t.Fatal("non-expected returned value")
+	}
+	if sp.ServeNonStop(nil) == false {
+		t.Fatal("non-expected returned value")
+	}
+	if sp.ServeNonStop(nil) == true {
+		t.Fatal("non-expected returned value")
 	}
 }
 

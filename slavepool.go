@@ -68,6 +68,22 @@ func (sp *SlavePool) Serve(w interface{}) {
 	}
 }
 
+// ServeNonStop returns true if work have been sended to the goroutine pool.
+//
+// This function returns a state and does not block the workflow.
+func (sp *SlavePool) ServeNonStop(w interface{}) bool {
+	i := 0
+	for i < sp.n {
+		select {
+		case sp.sv[i].ch <- w:
+			return true
+		default:
+			i++
+		}
+	}
+	return false
+}
+
 // Close closes the SlavePool
 func (sp *SlavePool) Close() {
 	for i := 0; i < sp.n; i++ {
