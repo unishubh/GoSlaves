@@ -2,16 +2,16 @@
 
 GoSlaves is a simple golang's library which can handle wide list of tasks asynchronously and safely.
 
-[![GoDoc](https://godoc.org/github.com/themester/GoSlaves?status.svg)](https://godoc.org/github.com/themester/GoSlaves)
-[![Go Report Card](https://goreportcard.com/badge/github.com/themester/goslaves)](https://goreportcard.com/report/github.com/themester/goslaves)
+[![GoDoc](https://godoc.org/github.com/dgrr/GoSlaves?status.svg)](https://godoc.org/github.com/dgrr/GoSlaves)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dgrr/goslaves)](https://goreportcard.com/report/github.com/dgrr/goslaves)
 
-![alt text](https://raw.githubusercontent.com/themester/GoSlaves/master/logo.png)
+![alt text](https://raw.githubusercontent.com/dgrr/GoSlaves/master/logo.png)
 
 Installation
 ------------
 
 ```
-$ go get -u -v -x github.com/themester/GoSlaves
+$ go get -u -v -x github.com/dgrr/GoSlaves
 ```
 
 Benchmark
@@ -57,7 +57,7 @@ import (
   "fmt"
   "net"
 
-  "github.com/themester/GoSlaves"
+  "github.com/dgrr/GoSlaves"
 )
 
 func main() {
