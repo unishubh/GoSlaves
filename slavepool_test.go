@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-func executeServe(sp *SlavePool, rounds int) {
+func executeServe(p *Pool, rounds int) {
 	for i := 0; i < rounds; i++ {
-		sp.Serve(i)
+		p.Serve(i)
 	}
 }
 

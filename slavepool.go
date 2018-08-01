@@ -24,8 +24,8 @@ func (s *slave) close() {
 	close(s.ch)
 }
 
-// SlavePool
-type SlavePool struct {
+// Pool slaves
+type Pool struct {
 	sv []slave
 	n  int
 }
@@ -34,7 +34,7 @@ type SlavePool struct {
 //
 // if workers is 0 default workers will be created
 // use workers var if you know what you are doing
-func NewPool(workers int, w func(interface{})) (sp SlavePool) {
+func NewPool(workers int, w func(interface{})) (p Pool) {
 	if w == nil {
 		return
 	}
@@ -42,10 +42,10 @@ func NewPool(workers int, w func(interface{})) (sp SlavePool) {
 		workers = runtime.GOMAXPROCS(0)
 	}
 
-	sp.n = workers
-	sp.sv = make([]slave, sp.n, sp.n)
-	for i := 0; i < sp.n; i++ {
-		sp.sv[i] = newSlave(w)
+	p.n = workers
+	p.sv = make([]slave, p.n, p.n)
+	for i := 0; i < p.n; i++ {
+		p.sv[i] = newSlave(w)
 	}
 	return
 }
@@ -53,15 +53,15 @@ func NewPool(workers int, w func(interface{})) (sp SlavePool) {
 // Serve sends work to goroutine pool
 //
 // If all slaves are busy this function will stop until any of this ends a task.
-func (sp *SlavePool) Serve(w interface{}) {
+func (p *Pool) Serve(w interface{}) {
 	i := 0
 	for {
 		select {
-		case sp.sv[i].ch <- w:
+		case p.sv[i].ch <- w:
 			return
 		default: // channel is busy
 			i++
-			if i == sp.n {
+			if i == p.n {
 				i = 0
 			}
 		}
@@ -71,11 +71,11 @@ func (sp *SlavePool) Serve(w interface{}) {
 // ServeNonStop returns true if work have been sended to the goroutine pool.
 //
 // This function returns a state and does not block the workflow.
-func (sp *SlavePool) ServeNonStop(w interface{}) bool {
+func (p *Pool) ServeNonStop(w interface{}) bool {
 	i := 0
-	for i < sp.n {
+	for i < p.n {
 		select {
-		case sp.sv[i].ch <- w:
+		case p.sv[i].ch <- w:
 			return true
 		default:
 			i++
@@ -85,8 +85,8 @@ func (sp *SlavePool) ServeNonStop(w interface{}) bool {
 }
 
 // Close closes the SlavePool
-func (sp *SlavePool) Close() {
-	for i := 0; i < sp.n; i++ {
-		sp.sv[i].close()
+func (p *Pool) Close() {
+	for i := 0; i < p.n; i++ {
+		p.sv[i].close()
 	}
 }
