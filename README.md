@@ -61,7 +61,7 @@ import (
 )
 
 func main() {
-  pool := slaves.NewPool(func(obj interface{}) {
+  pool := slaves.NewPool(0, func(obj interface{}) {
     conn := obj.(net.Conn)
     fmt.Fprintf(conn, "Welcome to GoSlaves!\n")
     conn.Close()
