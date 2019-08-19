@@ -11,13 +11,15 @@ type slave struct {
 
 func newSlave(w func(interface{})) (s slave) {
 	s.ch = make(chan interface{}, 1)
-	go func() {
-		var job interface{}
-		for job = range s.ch {
-			w(job)
-		}
-	}()
+	go s.start(w)
 	return s
+}
+
+func (s* slave) start (w func(interface{})){
+	var job interface{}
+	for job = range s.ch{
+		w(job)
+	}
 }
 
 func (s *slave) close() {
@@ -26,8 +28,8 @@ func (s *slave) close() {
 
 // Pool slaves
 type Pool struct {
-	sv []slave
-	n  int
+	slaves         []slave
+	numberOfSlaves int
 }
 
 // NewPool creates SlavePool.
@@ -36,16 +38,16 @@ type Pool struct {
 // use workers var if you know what you are doing
 func NewPool(workers int, w func(interface{})) (p Pool) {
 	if w == nil {
-		return
+		panic("Number of workers not defined")
 	}
 	if workers <= 0 {
 		workers = runtime.GOMAXPROCS(0)
 	}
 
-	p.n = workers
-	p.sv = make([]slave, p.n, p.n)
-	for i := 0; i < p.n; i++ {
-		p.sv[i] = newSlave(w)
+	p.numberOfSlaves = workers
+	p.slaves = make([]slave, p.numberOfSlaves, p.numberOfSlaves)
+	for i := 0; i < p.numberOfSlaves; i++ {
+		p.slaves[i] = newSlave(w)
 	}
 	return
 }
@@ -57,11 +59,11 @@ func (p *Pool) Serve(w interface{}) {
 	i := 0
 	for {
 		select {
-		case p.sv[i].ch <- w:
+		case p.slaves[i].ch <- w:
 			return
 		default: // channel is busy
 			i++
-			if i == p.n {
+			if i == p.numberOfSlaves {
 				i = 0
 			}
 		}
@@ -73,9 +75,9 @@ func (p *Pool) Serve(w interface{}) {
 // This function returns a state and does not block the workflow.
 func (p *Pool) ServeNonStop(w interface{}) bool {
 	i := 0
-	for i < p.n {
+	for i < p.numberOfSlaves {
 		select {
-		case p.sv[i].ch <- w:
+		case p.slaves[i].ch <- w:
 			return true
 		default:
 			i++
@@ -86,7 +88,7 @@ func (p *Pool) ServeNonStop(w interface{}) bool {
 
 // Close closes the SlavePool
 func (p *Pool) Close() {
-	for i := 0; i < p.n; i++ {
-		p.sv[i].close()
+	for i := 0; i < p.numberOfSlaves; i++ {
+		p.slaves[i].close()
 	}
 }
